@@ -97,7 +97,7 @@ def data_upload_tab():
         st.session_state.data = df_filtered
 
         st.subheader("Data Preview")
-        st.dataframe(df_filtered.head(), use_container_width=True)
+        st.dataframe(df_filtered.head(), width='stretch')
 
 def preprocess_data(df):
     """Preprocess the uploaded data"""
@@ -257,9 +257,9 @@ def data_table_tab():
         # Apply pandas styling to highlight columns
         display_df = filtered_df.style.apply(get_colors, axis=0)
 
-        st.dataframe(display_df, use_container_width=True)
+        st.dataframe(display_df, width='stretch')
     else:
-        st.dataframe(filtered_df, use_container_width=True)
+        st.dataframe(filtered_df, width='stretch')
 
     # Statistics
     if len(filtered_df) > 0:
@@ -419,7 +419,7 @@ def create_sankey_chart(df, granularity_type, metric):
         font_size=10
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 def documentation_tab():
     st.header("Documentation")
@@ -491,7 +491,7 @@ def documentation_tab():
                 channel_stats['ROAS'] = channel_stats['product_sales'] / channel_stats['impressions_cost']
                 channel_stats = channel_stats.sort_values('impressions_cost', ascending=False)
 
-                st.dataframe(channel_stats, use_container_width=True)
+                st.dataframe(channel_stats, width='stretch')
 
                 # Quick chart
                 fig = go.Figure(data=[
@@ -499,7 +499,7 @@ def documentation_tab():
                     go.Bar(name='Sales', x=channel_stats['channel'], y=channel_stats['product_sales'])
                 ])
                 fig.update_layout(barmode='group', title="Channel Spend vs Sales")
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
         else:
             st.info("Upload data to see campaign summary")
 
