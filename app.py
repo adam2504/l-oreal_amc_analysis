@@ -184,7 +184,7 @@ def data_table_tab():
         channel_filter = st.multiselect(
             "Path Channel",
             options=path_channels,
-            default=path_channels[:3] if path_channels else []  # Default to first 3
+            default=[]  # Start with no channels selected
         )
 
     # Apply filters
@@ -259,9 +259,9 @@ def data_table_tab():
         # Apply pandas styling to highlight columns
         display_df = filtered_df.style.apply(get_colors, axis=0)
 
-        st.dataframe(display_df, width='stretch')
+        st.dataframe(display_df)  # Autosize columns by default
     else:
-        st.dataframe(filtered_df, width='stretch')
+        st.dataframe(filtered_df)  # Autosize columns by default
 
     # Statistics
     if len(filtered_df) > 0:
