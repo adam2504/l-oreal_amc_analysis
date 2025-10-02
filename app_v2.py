@@ -282,32 +282,19 @@ def data_table_tab():
     existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
     existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
 
-    # Prepare warning messages for highlighted columns
-    highlight_msgs = []
-    if existing_conv_cols:
-        highlight_msgs.append(f"🟠 **Conversion KPIs (orange):** {', '.join(existing_conv_cols)}")
-    if existing_cons_cols:
-        highlight_msgs.append(f"🟣 **Consideration KPIs (purple):** {', '.join(existing_cons_cols)}")
+    # Display table with styling
+    # Define color function based on column category
+    def get_colors(column):
+        if column.name in existing_conv_cols:
+            return ['background-color: #FFA500'] * len(column)  # Orange
+        elif column.name in existing_cons_cols:
+            return ['background-color: #C896C8'] * len(column)  # Light purple
+        else:
+            return [''] * len(column)  # No highlight
 
-    # Normal display with styling
-    if highlight_msgs:
-        st.warning("  \n".join(highlight_msgs))
-
-        # Define color function based on column category
-        def get_colors(column):
-            if column.name in existing_conv_cols:
-                return ['background-color: #FFA500'] * len(column)  # Orange
-            elif column.name in existing_cons_cols:
-                return ['background-color: #C896C8'] * len(column)  # Light purple
-            else:
-                return [''] * len(column)  # No highlight
-
-        # Apply pandas styling to highlight columns
-        styled_df = display_df.style.apply(get_colors, axis=0)
-
-        st.dataframe(styled_df)  # Autosize columns by default
-    else:
-        st.dataframe(display_df)  # Autosize columns by default
+    # Apply pandas styling to highlight columns
+    styled_df = display_df.style.apply(get_colors, axis=0)
+    st.dataframe(styled_df)  # Autosize columns by default
 
     # Display plots separately if generated
     if generate_plots:
@@ -531,32 +518,19 @@ def media_mix_tab():
     existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
     existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
 
-    # Prepare warning messages for highlighted columns
-    highlight_msgs = []
-    if existing_conv_cols:
-        highlight_msgs.append(f"🟠 **Conversion KPIs (orange):** {', '.join(existing_conv_cols)}")
-    if existing_cons_cols:
-        highlight_msgs.append(f"🟣 **Consideration KPIs (purple):** {', '.join(existing_cons_cols)}")
+    # Display table with styling
+    # Define color function based on column category
+    def get_colors(column):
+        if column.name in existing_conv_cols:
+            return ['background-color: #FFA500'] * len(column)  # Orange
+        elif column.name in existing_cons_cols:
+            return ['background-color: #C896C8'] * len(column)  # Light purple
+        else:
+            return [''] * len(column)  # No highlight
 
-    # Normal display with styling
-    if highlight_msgs:
-        st.warning("  \n".join(highlight_msgs))
-
-        # Define color function based on column category
-        def get_colors(column):
-            if column.name in existing_conv_cols:
-                return ['background-color: #FFA500'] * len(column)  # Orange
-            elif column.name in existing_cons_cols:
-                return ['background-color: #C896C8'] * len(column)  # Light purple
-            else:
-                return [''] * len(column)  # No highlight
-
-        # Apply pandas styling to highlight columns
-        styled_df = display_df.style.apply(get_colors, axis=0)
-
-        st.dataframe(styled_df)  # Autosize columns by default
-    else:
-        st.dataframe(display_df)  # Autosize columns by default
+    # Apply pandas styling to highlight columns
+    styled_df = display_df.style.apply(get_colors, axis=0)
+    st.dataframe(styled_df)  # Autosize columns by default
 
     # Display plots separately if generated
     if generate_plots:
