@@ -193,8 +193,11 @@ def data_table_tab():
         filtered_df = filtered_df[filtered_df['granularity'].isin(granularity_filter)]
     if channel_filter:
         def contains_selected_channels(path):
-            path_str = str(path).upper()
-            return any(c in path_str for c in channel_filter)
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                return any(channel in matches for channel in channel_filter)
+            except:
+                return False
         filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
 
     # Color picker for channels
