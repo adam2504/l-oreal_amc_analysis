@@ -195,7 +195,7 @@ def data_table_tab():
         def contains_selected_channels(path):
             try:
                 matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
-                return any(channel in matches for channel in channel_filter)
+                return all(channel in matches for channel in channel_filter)
             except:
                 return False
         filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
