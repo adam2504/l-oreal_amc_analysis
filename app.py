@@ -26,7 +26,7 @@ def main():
     st.title("📊 AMC Analytics L'Oréal")
 
     # Tab layout
-    tab1, tab2, tab3 = st.tabs(["📁 Data Upload", "📋 Data Table", "📖 Documentation"])
+    tab1, tab2, tab3 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📖 Documentation"])
 
     with tab1:
         data_upload_tab()
@@ -109,13 +109,13 @@ def preprocess_data(df):
 
     # Calculate additional KPIs
     if 'product_sales' in df.columns and 'impressions_cost' in df.columns:
-        df['roas'] = df['product_sales'] / df['impressions_cost'].replace(0, np.nan)
+        df['ROAS'] = df['product_sales'] / df['impressions_cost'].replace(0, np.nan)
 
     if 'impressions_cost' in df.columns and 'detail_page_view' in df.columns:
-        df['cpdpv'] = df['impressions_cost'] / df['detail_page_view'].replace(0, np.nan)
+        df['CPDPV'] = df['impressions_cost'] / df['detail_page_view'].replace(0, np.nan)
 
     if 'purchases' in df.columns and 'impressions_cost' in df.columns:
-        df['cpa'] = df['impressions_cost'] / df['purchases'].replace(0, np.nan)
+        df['CPA'] = df['impressions_cost'] / df['purchases'].replace(0, np.nan)
 
     # Extract channels from data for color initialization
     channels = []
