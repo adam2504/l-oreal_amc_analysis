@@ -26,7 +26,7 @@ def main():
     st.title("📊 AMC Analytics L'Oréal")
 
     # Tab layout
-    tab1, tab2, tab3, tab4 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📈 Conversion Paths", "📖 Documentation"])
+    tab1, tab2, tab3 = st.tabs(["📁 Data Upload", "📋 Data Table", "📖 Documentation"])
 
     with tab1:
         data_upload_tab()
@@ -38,12 +38,6 @@ def main():
             st.info("Please upload a CSV file first")
 
     with tab3:
-        if st.session_state.data is not None:
-            conversion_paths_tab()
-        else:
-            st.info("Please upload a CSV file first")
-
-    with tab4:
         documentation_tab()
 
 def data_upload_tab():
@@ -385,52 +379,6 @@ def data_table_tab():
                 st.metric(f"Min {selected_metric}",
                          f"{filtered_df[selected_metric].min():.2f}")
 
-def conversion_paths_tab():
-    st.header("Conversion Path Analysis")
-
-    df = st.session_state.data.copy()
-    path_df = df[df['analysis_level'] == 'Path to conversion'].copy()
-
-    if len(path_df) == 0:
-        st.warning("No conversion path data found")
-        return
-
-    # Filters for path visualization
-    col1, col2 = st.columns(2)
-
-    with col1:
-        granularity_options = path_df['granularity'].unique()
-        selected_granularity = st.selectbox("Select Granularity", granularity_options)
-
-    with col2:
-        max_paths = st.slider("Max paths to show", 1, 50, 10)
-
-    filtered_paths = path_df[path_df['granularity'] == selected_granularity]
-
-    if len(filtered_paths) == 0:
-        st.warning(f"No data for {selected_granularity} granularity")
-        return
-
-    # Display top paths by a metric
-    metric_options = ['purchases', 'product_sales', 'purchases', 'clicks_all_users']
-    selected_metric = st.selectbox("Sort paths by", metric_options)
-
-    # Sort and get top paths
-    sorted_paths = filtered_paths.sort_values(by=selected_metric, ascending=False).head(max_paths)
-
-    # Create Sankey chart
-    create_sankey_chart(sorted_paths, selected_granularity, selected_metric)
-
-    # Individual path details
-    st.subheader("Path Details")
-    selected_path_idx = st.selectbox(
-        "Select a path to view details",
-        options=range(len(sorted_paths)),
-        format_func=lambda x: f"{x+1}: {sorted_paths.iloc[x]['description']}"
-    )
-
-    selected_path_data = sorted_paths.iloc[selected_path_idx]
-    st.json(selected_path_data.to_dict())
 
 def create_venn_diagram(channels, color_dict):
     """
@@ -546,95 +494,6 @@ def create_circle_shape(center, radius, color, opacity):
         opacity=opacity,
         line=dict(width=2, color=color)
     )
-
-def create_sankey_chart(df, granularity_type, metric):
-    """Create a Sankey diagram for conversion paths"""
-
-    # Parse paths and create flow data
-    nodes = set()
-    links = []
-
-    for _, row in df.iterrows():
-        path_str = str(row['path'])
-        if path_str and path_str != 'nan':
-            try:
-                # Extract steps from path like "[1/SEARCH, 2/DSP, 3/CONVERSION]"
-                matches = re.findall(r'(\d+)/([A-Z\s]+)', path_str.upper())
-                if matches and len(matches) > 1:
-                    for i in range(len(matches) - 1):
-                        current = matches[i][1].strip()
-                        next_step = matches[i + 1][1].strip()
-
-                        nodes.add(current)
-                        nodes.add(next_step)
-
-                        links.append({
-                            'source': current,
-                            'target': next_step,
-                            'value': row[metric] if pd.notna(row[metric]) else 1
-                        })
-            except:
-                continue
-
-    if not nodes or not links:
-        st.warning("Could not parse conversion paths")
-        return
-
-    # Aggregate links
-    link_dict = {}
-    for link in links:
-        key = (link['source'], link['target'])
-        if key in link_dict:
-            link_dict[key] += link['value']
-        else:
-            link_dict[key] = link['value']
-
-    # Create node list and mapping
-    node_list = list(nodes)
-    node_map = {node: i for i, node in enumerate(node_list)}
-
-    # Prepare Sankey data
-    link_sources = []
-    link_targets = []
-    link_values = []
-
-    for (source, target), value in link_dict.items():
-        if source in node_map and target in node_map:
-            link_sources.append(node_map[source])
-            link_targets.append(node_map[target])
-            link_values.append(value)
-
-    # Create color mapping
-    node_colors = []
-    for node in node_list:
-        if node in st.session_state.channel_colors:
-            node_colors.append(st.session_state.channel_colors[node])
-        else:
-            node_colors.append(DEFAULT_COLORS[len(node_colors) % len(DEFAULT_COLORS)])
-
-    # Create Sankey diagram
-    fig = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
-            label=node_list,
-            color=node_colors
-        ),
-        link=dict(
-            source=link_sources,
-            target=link_targets,
-            value=link_values,
-            color=[node_colors[src] for src in link_sources]
-        )
-    )])
-
-    fig.update_layout(
-        title_text=f"Conversion Paths ({granularity_type}) - {metric}",
-        font_size=10
-    )
-
-    st.plotly_chart(fig, config={'responsive': True})
 
 def documentation_tab():
     st.header("Documentation")
