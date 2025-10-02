@@ -210,10 +210,9 @@ def data_table_tab():
             if new_color != color:
                 st.session_state.channel_colors[channel] = new_color
 
-    # Display table
+    # Display table with conversion KPIs highlighted in orange
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
 
-    # Note about conversion KPIs (orange highlighting not supported in this Streamlit version)
     conversion_columns = [
         'user_purchased', 'product_sales', 'purchases', 'units_sold',
         'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
@@ -221,11 +220,19 @@ def data_table_tab():
         'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
     ]
 
+    # Check which conversion columns exist
     existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
-    if existing_conv_cols:
-        st.info(f"⚠️ **Conversion KPIs in this table:** {', '.join(existing_conv_cols)} - (Note: Column highlighting requires a newer Streamlit version)")
 
-    st.dataframe(filtered_df, use_container_width=True)
+    if existing_conv_cols:
+        # Highlight conversion KPI columns with orange background
+        st.warning(f"🔍 **Conversion KPIs highlighted in orange:** {', '.join(existing_conv_cols)}")
+
+        # Apply pandas styling to highlight columns
+        display_df = filtered_df.style.apply(lambda x: ['background-color: #FFA500' if x.name in existing_conv_cols else '' for i in x], axis=0)
+
+        st.dataframe(display_df, use_container_width=True)
+    else:
+        st.dataframe(filtered_df, use_container_width=True)
 
     # Statistics
     if len(filtered_df) > 0:
