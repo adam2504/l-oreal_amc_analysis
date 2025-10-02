@@ -212,6 +212,19 @@ def data_table_tab():
 
     # Display table
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
+
+    # Note about conversion KPIs (orange highlighting not supported in this Streamlit version)
+    conversion_columns = [
+        'user_purchased', 'product_sales', 'purchases', 'units_sold',
+        'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
+        'ntb_purchased', 'ntb_product_sales', 'ntb_purchases', 'ntb_units_sold',
+        'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
+    ]
+
+    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
+    if existing_conv_cols:
+        st.info(f"⚠️ **Conversion KPIs in this table:** {', '.join(existing_conv_cols)} - (Note: Column highlighting requires a newer Streamlit version)")
+
     st.dataframe(filtered_df, use_container_width=True)
 
     # Statistics
