@@ -394,7 +394,6 @@ def create_venn_diagram(channels, color_dict):
         # Single large circle
         centers = [[0, 0]]
         radius = 1.5
-        axis_range = [-2.5, 2.5]
     elif n_channels == 2:
         # Two side-by-side circles, non-overlapping
         centers = [[-0.8, 0], [0.8, 0]]
