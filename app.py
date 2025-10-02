@@ -58,8 +58,6 @@ def data_upload_tab():
         # Data cleaning and preprocessing
         df = preprocess_data(df)
 
-        st.session_state.data = df
-
         st.success("✅ File uploaded successfully!")
 
         # Basic statistics
@@ -85,8 +83,21 @@ def data_upload_tab():
             else:
                 st.info("No channels found in the data")
 
+        # Video information checkbox
+        has_video = st.checkbox("File contains video information", value=True)
+
+        # Filter columns based on video option
+        df_filtered = df
+        if not has_video:
+            video_cols = [col for col in df.columns if 'video' in col.lower()]
+            if video_cols:
+                df_filtered = df.drop(columns=video_cols)
+                st.info(f"Removed {len(video_cols)} video-related columns: {', '.join(video_cols)}")
+
+        st.session_state.data = df_filtered
+
         st.subheader("Data Preview")
-        st.dataframe(df.head(), use_container_width=True)
+        st.dataframe(df_filtered.head(), use_container_width=True)
 
 def preprocess_data(df):
     """Preprocess the uploaded data"""
