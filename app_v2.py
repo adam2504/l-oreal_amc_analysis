@@ -417,7 +417,7 @@ def media_mix_tab():
     st.write("**Analysis Level:** Media Mix")
 
     # Filters
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         granularity_options = df['granularity'].dropna().unique()
@@ -432,6 +432,18 @@ def media_mix_tab():
             granularity_filter = None
 
     with col2:
+        brand_options = df['brand'].dropna().unique()
+        if len(brand_options) > 0:
+            brand_filter = st.selectbox(
+                "Brand",
+                options=brand_options,
+                index=0,
+                key="media_mix_brand"
+            )
+        else:
+            brand_filter = None
+
+    with col3:
         channel_filter = st.multiselect(
             "Path Channel",
             options=path_channels,
@@ -445,6 +457,8 @@ def media_mix_tab():
         filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
     if granularity_filter:
         filtered_df = filtered_df[filtered_df['granularity'] == granularity_filter]
+    if brand_filter:
+        filtered_df = filtered_df[filtered_df['brand'] == brand_filter]
     if channel_filter:
         def contains_selected_channels(path):
             try:
