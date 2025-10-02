@@ -139,6 +139,17 @@ def data_table_tab():
 
     df = st.session_state.data.copy()
 
+    # Extract path channels for filter
+    path_channels = set()
+    if 'path' in df.columns:
+        for path in df['path'].dropna():
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', path.upper())
+                path_channels.update(matches)
+            except:
+                pass
+    path_channels = sorted(list(path_channels))
+
     # Filters
     col1, col2, col3 = st.columns(3)
 
@@ -158,9 +169,9 @@ def data_table_tab():
 
     with col3:
         channel_filter = st.multiselect(
-            "Channel",
-            options=[c for c in df['channel'].dropna().unique() if c],
-            default=[c for c in df['channel'].dropna().unique() if c][:5]  # Default to first 5
+            "Path Channel",
+            options=path_channels,
+            default=path_channels[:3] if path_channels else []  # Default to first 3
         )
 
     # Apply filters
@@ -170,7 +181,10 @@ def data_table_tab():
     if granularity_filter:
         filtered_df = filtered_df[filtered_df['granularity'].isin(granularity_filter)]
     if channel_filter:
-        filtered_df = filtered_df[filtered_df['channel'].isin(channel_filter)]
+        def contains_selected_channels(path):
+            path_str = str(path).upper()
+            return any(c in path_str for c in channel_filter)
+        filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
 
     # Color picker for channels
     st.subheader("Channel Colors")
