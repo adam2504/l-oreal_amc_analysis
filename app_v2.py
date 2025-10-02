@@ -175,6 +175,7 @@ def data_table_tab():
     path_channels = sorted(list(path_channels))
 
     # Filters
+    st.subheader("Filters")
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -401,9 +402,35 @@ def media_mix_tab():
 
     # Fixed analysis level
     analysis_level_filter = 'Media Mix'
-    st.write("**Analysis Level:** Media Mix")
+
+    # Statistics (moved up)
+    if len(df[df['analysis_level'] == analysis_level_filter]) > 0:
+        filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
+        st.subheader("Quick Statistics")
+
+        numeric_cols = filtered_df_for_stats.select_dtypes(include=[np.number]).columns
+
+        if len(numeric_cols) > 0:
+            selected_metric = st.selectbox(
+                "Select metric for analysis",
+                options=numeric_cols,
+                index=min(10, len(numeric_cols)-1),  # Default to a metric column
+                key="media_mix_overview_metric"
+            )
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(f"Average {selected_metric}",
+                         f"{filtered_df_for_stats[selected_metric].mean():.2f}")
+            with col2:
+                st.metric(f"Max {selected_metric}",
+                         f"{filtered_df_for_stats[selected_metric].max():.2f}")
+            with col3:
+                st.metric(f"Min {selected_metric}",
+                         f"{filtered_df_for_stats[selected_metric].min():.2f}")
 
     # Filters
+    st.subheader("Filters")
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -460,40 +487,18 @@ def media_mix_tab():
 
     with col1:
         sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
-        sort_by = st.selectbox("Sort by column", options=sort_options, key="media_mix_sort_by")
+        sort_by = st.selectbox("Sort by column (descending)", options=sort_options, key="media_mix_sort_by")
 
     with col2:
         if sort_by != 'None':
-            sort_order = st.selectbox("Sort order", options=["Descending", "Ascending"], key="media_mix_sort_order")
+            # Always sort in descending order when a column is selected
+            sort_order = "Descending"
         else:
             sort_order = "Descending"  # default
 
         max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="media_mix_max_rows")
 
-    # Statistics
-    if len(filtered_df) > 0:
-        st.subheader("Quick Statistics")
 
-        numeric_cols = filtered_df.select_dtypes(include=[np.number]).columns
-
-        if len(numeric_cols) > 0:
-            selected_metric = st.selectbox(
-                "Select metric for analysis",
-                options=numeric_cols,
-                index=min(10, len(numeric_cols)-1),  # Default to a metric column
-                key="media_mix_metric"
-            )
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(f"Average {selected_metric}",
-                         f"{filtered_df[selected_metric].mean():.2f}")
-            with col2:
-                st.metric(f"Max {selected_metric}",
-                         f"{filtered_df[selected_metric].max():.2f}")
-            with col3:
-                st.metric(f"Min {selected_metric}",
-                         f"{filtered_df[selected_metric].min():.2f}")
 
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
 
@@ -506,8 +511,6 @@ def media_mix_tab():
 
     # Limit to max_rows for display and plots
     display_df = filtered_df_sorted.head(max_rows)
-
-    generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
 
     # Display the table first (always, whether plots are generated or not)
     # Highlight columns logic
@@ -546,6 +549,8 @@ def media_mix_tab():
     # Apply pandas styling to highlight columns
     styled_df = display_df.style.apply(get_colors, axis=0)
     st.dataframe(styled_df)  # Autosize columns by default
+
+    generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
 
     # Color picker for channels
     st.subheader("Channel Colors")
