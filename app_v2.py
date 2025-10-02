@@ -455,17 +455,7 @@ def media_mix_tab():
                 return False
         filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
 
-    # Color picker for channels
-    st.subheader("Channel Colors")
-    color_cols = st.columns(min(4, len(st.session_state.channel_colors)))
-
-    for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
-        with color_cols[i % 4]:
-            new_color = st.color_picker(f"{channel}", color, key=f"media_mix_color_{channel}")
-            if new_color != color:
-                st.session_state.channel_colors[channel] = new_color
-
-    # Add sorting options
+    # Add sorting options and max rows
     col1, col2 = st.columns(2)
 
     with col1:
@@ -478,7 +468,32 @@ def media_mix_tab():
         else:
             sort_order = "Descending"  # default
 
-    max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="media_mix_max_rows")
+        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="media_mix_max_rows")
+
+    # Statistics
+    if len(filtered_df) > 0:
+        st.subheader("Quick Statistics")
+
+        numeric_cols = filtered_df.select_dtypes(include=[np.number]).columns
+
+        if len(numeric_cols) > 0:
+            selected_metric = st.selectbox(
+                "Select metric for analysis",
+                options=numeric_cols,
+                index=min(10, len(numeric_cols)-1),  # Default to a metric column
+                key="media_mix_metric"
+            )
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(f"Average {selected_metric}",
+                         f"{filtered_df[selected_metric].mean():.2f}")
+            with col2:
+                st.metric(f"Max {selected_metric}",
+                         f"{filtered_df[selected_metric].max():.2f}")
+            with col3:
+                st.metric(f"Min {selected_metric}",
+                         f"{filtered_df[selected_metric].min():.2f}")
 
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
 
@@ -531,6 +546,16 @@ def media_mix_tab():
     # Apply pandas styling to highlight columns
     styled_df = display_df.style.apply(get_colors, axis=0)
     st.dataframe(styled_df)  # Autosize columns by default
+
+    # Color picker for channels
+    st.subheader("Channel Colors")
+    color_cols = st.columns(min(4, len(st.session_state.channel_colors)))
+
+    for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
+        with color_cols[i % 4]:
+            new_color = st.color_picker(f"{channel}", color, key=f"media_mix_color_{channel}")
+            if new_color != color:
+                st.session_state.channel_colors[channel] = new_color
 
     # Display plots separately if generated
     if generate_plots:
@@ -590,33 +615,7 @@ def media_mix_tab():
                         height=300,
                         showlegend=False
                     )
-
                 st.plotly_chart(fig, config={'responsive': True})
-
-    # Statistics
-    if len(filtered_df) > 0:
-        st.subheader("Quick Statistics")
-
-        numeric_cols = filtered_df.select_dtypes(include=[np.number]).columns
-
-        if len(numeric_cols) > 0:
-            selected_metric = st.selectbox(
-                "Select metric for analysis",
-                options=numeric_cols,
-                index=min(10, len(numeric_cols)-1),  # Default to a metric column
-                key="media_mix_metric"
-            )
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(f"Average {selected_metric}",
-                         f"{filtered_df[selected_metric].mean():.2f}")
-            with col2:
-                st.metric(f"Max {selected_metric}",
-                         f"{filtered_df[selected_metric].max():.2f}")
-            with col3:
-                st.metric(f"Min {selected_metric}",
-                         f"{filtered_df[selected_metric].min():.2f}")
 
 
 def create_venn_diagram(channels, color_dict):
