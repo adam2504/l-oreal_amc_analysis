@@ -165,17 +165,19 @@ def data_table_tab():
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        analysis_level_filter = st.multiselect(
+        analysis_level_options = df['analysis_level'].unique()
+        analysis_level_filter = st.selectbox(
             "Analysis Level",
-            options=df['analysis_level'].unique(),
-            default=df['analysis_level'].unique()
+            options=analysis_level_options,
+            index=0 if len(analysis_level_options) > 0 else 0
         )
 
     with col2:
-        granularity_filter = st.multiselect(
+        granularity_options = df['granularity'].dropna().unique()
+        granularity_filter = st.selectbox(
             "Granularity",
-            options=df['granularity'].dropna().unique(),
-            default=df['granularity'].dropna().unique()
+            options=granularity_options,
+            index=0 if len(granularity_options) > 0 else None
         )
 
     with col3:
@@ -188,9 +190,9 @@ def data_table_tab():
     # Apply filters
     filtered_df = df.copy()
     if analysis_level_filter:
-        filtered_df = filtered_df[filtered_df['analysis_level'].isin(analysis_level_filter)]
+        filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
     if granularity_filter:
-        filtered_df = filtered_df[filtered_df['granularity'].isin(granularity_filter)]
+        filtered_df = filtered_df[filtered_df['granularity'] == granularity_filter]
     if channel_filter:
         def contains_selected_channels(path):
             try:
