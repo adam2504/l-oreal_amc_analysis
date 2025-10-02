@@ -419,7 +419,7 @@ def create_sankey_chart(df, granularity_type, metric):
         font_size=10
     )
 
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, config={'responsive': True})
 
 def documentation_tab():
     st.header("Documentation")
@@ -499,7 +499,7 @@ def documentation_tab():
                     go.Bar(name='Sales', x=channel_stats['channel'], y=channel_stats['product_sales'])
                 ])
                 fig.update_layout(barmode='group', title="Channel Spend vs Sales")
-                st.plotly_chart(fig, width='stretch')
+                st.plotly_chart(fig, config={'responsive': True})
         else:
             st.info("Upload data to see campaign summary")
 
