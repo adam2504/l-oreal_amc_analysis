@@ -26,7 +26,7 @@ def main():
     st.title("📊 AMC Analytics L'Oréal")
 
     # Tab layout
-    tab1, tab2, tab3, tab4 = st.tabs(["📁 Data Upload", "📋 Data Table", "📈 Conversion Paths", "📖 Documentation"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📈 Conversion Paths", "📖 Documentation"])
 
     with tab1:
         data_upload_tab()
@@ -212,9 +212,38 @@ def data_table_tab():
             if new_color != color:
                 st.session_state.channel_colors[channel] = new_color
 
-    # Display table with KPIs highlighted (orange for conversion, purple for consideration)
+    # Add sorting options
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
+        sort_by = st.selectbox("Sort by column", options=sort_options)
+
+    with col2:
+        if sort_by != 'None':
+            sort_order = st.selectbox("Sort order", options=["Descending", "Ascending"])
+        else:
+            sort_order = "Descending"  # default
+
+    with col3:
+        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5)
+
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
 
+    # Apply sorting if requested
+    if sort_by != 'None':
+        ascending = (sort_order == "Ascending")
+        filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
+    else:
+        filtered_df_sorted = filtered_df
+
+    # Limit to max_rows for display and plots
+    display_df = filtered_df_sorted.head(max_rows)
+
+    generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots")
+
+    # Display the table first (always, whether plots are generated or not)
+    # Highlight columns logic
     conversion_columns = [
         'user_purchased', 'product_sales', 'purchases', 'units_sold',
         'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
@@ -244,6 +273,7 @@ def data_table_tab():
     if existing_cons_cols:
         highlight_msgs.append(f"🟣 **Consideration KPIs (purple):** {', '.join(existing_cons_cols)}")
 
+    # Normal display with styling
     if highlight_msgs:
         st.warning("  \n".join(highlight_msgs))
 
@@ -257,11 +287,79 @@ def data_table_tab():
                 return [''] * len(column)  # No highlight
 
         # Apply pandas styling to highlight columns
-        display_df = filtered_df.style.apply(get_colors, axis=0)
+        styled_df = display_df.style.apply(get_colors, axis=0)
 
-        st.dataframe(display_df)  # Autosize columns by default
+        st.dataframe(styled_df)  # Autosize columns by default
     else:
-        st.dataframe(filtered_df)  # Autosize columns by default
+        st.dataframe(display_df)  # Autosize columns by default
+
+    # Display plots separately if generated
+    if generate_plots:
+        st.subheader("📊 Charts for Each Row")
+        st.info(f"Displaying charts for the {len(display_df)} rows shown above")
+
+        # Create and display plots for each row
+        for idx, row in display_df.iterrows():
+            # Get the path from the row
+            path_value = str(row.get('path', f'Row {idx}'))
+            path_clean = path_value.replace('[', '').replace(']', '').strip()
+
+            with st.expander(f"📈 Chart for Path: {path_clean}", expanded=False):
+                # For Media Mix analysis level, create Venn diagram
+                if analysis_level_filter == 'Media Mix':
+                    # Extract channels from path
+                    try:
+                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
+                        unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
+
+                        if len(unique_channels) >= 2:
+                            # Create Venn diagram visualization
+                            fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
+                        else:
+                            # Fallback: simple channel display
+                            fig = go.Figure()
+                            y_positions = list(range(len(unique_channels)))
+
+                            for i, channel in enumerate(unique_channels):
+                                color = st.session_state.channel_colors.get(channel, '#1f77b4')
+                                fig.add_trace(go.Scatter(
+                                    x=[0],
+                                    y=[i],
+                                    mode='markers+text',
+                                    marker=dict(color=color, size=50),
+                                    text=[channel],
+                                    textposition="middle right",
+                                    name=channel
+                                ))
+
+                            fig.update_layout(
+                                title="Media Mix Channels",
+                                xaxis=dict(showticklabels=False),
+                                yaxis=dict(showticklabels=False),
+                                height=300,
+                                showlegend=False
+                            )
+                    except:
+                        # Fallback in case of error
+                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
+                        fig.update_layout(title="Error creating Venn diagram", height=300)
+
+                else:
+                    # For other analysis levels: dummy test data
+                    dummy_data = np.random.randint(10, 100, size=5)
+                    plot_labels = ['Metric 1', 'Metric 2', 'Metric 3', 'Metric 4', 'Metric 5']
+
+                    fig = go.Figure(data=[go.Bar(x=plot_labels, y=dummy_data)])
+                    fig.update_layout(
+                        title=f"Path: {path_clean} - KPIs",
+                        xaxis_title="Metrics",
+                        yaxis_title="Values",
+                        width=600,
+                        height=300,
+                        showlegend=False
+                    )
+
+                st.plotly_chart(fig, config={'responsive': True})
 
     # Statistics
     if len(filtered_df) > 0:
@@ -333,6 +431,121 @@ def conversion_paths_tab():
 
     selected_path_data = sorted_paths.iloc[selected_path_idx]
     st.json(selected_path_data.to_dict())
+
+def create_venn_diagram(channels, color_dict):
+    """
+    Create a Venn diagram visualization for channels using overlapping circles
+    """
+    fig = go.Figure()
+
+    # Number of channels
+    n_channels = len(channels)
+
+    # Position circles in a pattern that keeps them circular
+    if n_channels == 1:
+        # Single large circle
+        centers = [[0, 0]]
+        radius = 1.5
+        axis_range = [-2.5, 2.5]
+    elif n_channels == 2:
+        # Two side-by-side circles, non-overlapping
+        centers = [[-0.8, 0], [0.8, 0]]
+        radius = 1.0
+        axis_range = [-2.5, 2.5]
+    elif n_channels == 3:
+        # Triangle arrangement
+        centers = [[0, 1], [-0.85, -0.45], [0.85, -0.45]]
+        radius = 1.0
+        axis_range = [-3, 3]
+    elif n_channels == 4:
+        # Square arrangement
+        centers = [[0, 0.8], [-0.75, 0], [0.75, 0], [0, -0.8]]
+        radius = 0.8
+        axis_range = [-3, 3]
+    else:
+        # For 5+ channels, circular arrangement
+        centers = []
+        radius = 0.7 if n_channels > 6 else 0.8
+        angle_step = 2 * 3.14159 / n_channels
+        for i in range(n_channels):
+            angle = i * angle_step
+            x = 1.3 * np.cos(angle)
+            y = 1.3 * np.sin(angle)
+            centers.append([x, y])
+        axis_range = [-2.5, 2.5]
+
+    # Create circles for all channels
+    colors = [color_dict.get(ch, DEFAULT_COLORS[i % len(DEFAULT_COLORS)]) for i, ch in enumerate(channels)]
+
+    for center, color in zip(centers, colors):
+        circle = create_circle_shape(center, radius, color, 0.7)
+        fig.add_shape(circle)
+
+    # Add text inside each circle (not in center)
+    if n_channels == 1:
+        # Single circle - text in center
+        fig.add_annotation(
+            x=0, y=0,
+            text=channels[0],
+            showarrow=False,
+            font=dict(size=16, color='white', weight='bold'),
+            xanchor='center',
+            yanchor='middle'
+        )
+    else:
+        # Multiple circles - text inside each circle
+        for i, (center, channel) in enumerate(zip(centers, channels)):
+            fig.add_annotation(
+                x=center[0], y=center[1],
+                text=channel,
+                showarrow=False,
+                font=dict(size=12, color='white', weight='bold'),
+                xanchor='center',
+                yanchor='middle'
+            )
+
+    # Update axes - no grid, no labels, no ticks
+    fig.update_xaxes(
+        range=axis_range,
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False,
+        visible=False
+    )
+    fig.update_yaxes(
+        range=axis_range,
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False,
+        visible=False
+    )
+
+    fig.update_layout(
+        title="Media Mix Channels",
+        height=900,
+        width=900,  # Square aspect ratio to ensure circular shapes
+        showlegend=False,
+        plot_bgcolor='rgba(0,0,0,0)'  # Transparent background
+    )
+
+    # Force equal aspect ratio to keep circles perfectly round
+    fig.update_yaxes(scaleanchor="x", scaleratio=1)
+
+    return fig
+
+def create_circle_shape(center, radius, color, opacity):
+    """
+    Create a circle shape for Venn diagram
+    """
+    return dict(
+        type="circle",
+        xref="x", yref="y",
+        x0=center[0] - radius, y0=center[1] - radius,
+        x1=center[0] + radius, y1=center[1] + radius,
+        fillcolor=color,
+        opacity=opacity,
+        line=dict(width=2, color=color)
+    )
 
 def create_sankey_chart(df, granularity_type, metric):
     """Create a Sankey diagram for conversion paths"""
