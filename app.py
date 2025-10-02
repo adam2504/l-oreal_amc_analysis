@@ -8,7 +8,7 @@ from collections import defaultdict, Counter
 import numpy as np
 
 # Configure page
-st.set_page_config(page_title="Data Analytics Dashboard", page_icon="📊", layout="wide")
+st.set_page_config(page_title="AMC Analytics L'Oréal", page_icon="📊", layout="wide")
 
 # Initialize session state
 if 'data' not in st.session_state:
@@ -23,7 +23,7 @@ DEFAULT_COLORS = [
 ]
 
 def main():
-    st.title("📊 Data Analytics Dashboard")
+    st.title("📊 AMC Analytics L'Oréal")
 
     # Tab layout
     tab1, tab2, tab3, tab4 = st.tabs(["📁 Data Upload", "📋 Data Table", "📈 Conversion Paths", "📖 Documentation"])
