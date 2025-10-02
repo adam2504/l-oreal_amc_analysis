@@ -499,7 +499,6 @@ def create_single_channel_display(channels, color_dict):
         )
 
         fig.update_layout(
-            title=f"Channel: {channel}",
             height=300,
             width=400,
             showlegend=False,
@@ -538,8 +537,8 @@ def create_chevron_diagram(steps, color_dict):
         color = color_dict.get(step, DEFAULT_COLORS[i % len(DEFAULT_COLORS)])
 
         # Create chevron shape (arrow pointing right)
-        chevron_width = 0.8
-        chevron_height = 0.6
+        chevron_width = 1.6
+        chevron_height = 1.2
 
         # Chevron points: left triangle sloping to right
         chevron_points = [
@@ -579,18 +578,6 @@ def create_chevron_diagram(steps, color_dict):
             yanchor='middle'
         )
 
-        # Add step number above chevron
-        if n_steps > 1:
-            fig.add_annotation(
-                x=x_pos,
-                y=y_pos + chevron_height + 0.3,
-                text=f"Step {i+1}",
-                showarrow=False,
-                font=dict(size=8, color='black'),
-                xanchor='center',
-                yanchor='middle'
-            )
-
     # Add arrows between steps
     if n_steps > 1:
         for i in range(n_steps - 1):
@@ -616,7 +603,6 @@ def create_chevron_diagram(steps, color_dict):
     y_max = 1.5
 
     fig.update_layout(
-        title="Conversion Path Flow",
         height=400,
         width=max(600, n_steps * 150),  # Adjust width based on number of steps
         showlegend=False,
