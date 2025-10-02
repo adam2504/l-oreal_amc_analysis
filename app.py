@@ -210,7 +210,7 @@ def data_table_tab():
             if new_color != color:
                 st.session_state.channel_colors[channel] = new_color
 
-    # Display table with conversion KPIs highlighted in orange
+    # Display table with KPIs highlighted (orange for conversion, purple for consideration)
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
 
     conversion_columns = [
@@ -220,15 +220,42 @@ def data_table_tab():
         'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
     ]
 
-    # Check which conversion columns exist
-    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
+    consideration_columns = [
+        'Clicks', 'user_detail_page_view', 'detail_page_view', 'user_detail_page_view_clicks',
+        'detail_page_view_clicks', 'user_detail_page_view_views', 'detail_page_view_views',
+        'user_add_to_cart', 'add_to_cart', 'user_add_to_cart_clicks', 'add_to_cart_clicks',
+        'user_add_to_cart_views', 'add_to_cart_views', 'user_total_detail_page_view',
+        'total_detail_page_view', 'user_total_detail_page_view_clicks', 'total_detail_page_view_clicks',
+        'user_total_detail_page_view_views', 'total_detail_page_view_views', 'user_total_add_to_cart',
+        'total_add_to_cart', 'user_total_add_to_cart_clicks', 'total_add_to_cart_clicks',
+        'user_total_add_to_cart_views', 'total_add_to_cart_views'
+    ]
 
+    # Check which KPI columns exist
+    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
+    existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
+
+    # Prepare warning messages for highlighted columns
+    highlight_msgs = []
     if existing_conv_cols:
-        # Highlight conversion KPI columns with orange background
-        st.warning(f"🔍 **Conversion KPIs highlighted in orange:** {', '.join(existing_conv_cols)}")
+        highlight_msgs.append(f"🟠 **Conversion KPIs (orange):** {', '.join(existing_conv_cols)}")
+    if existing_cons_cols:
+        highlight_msgs.append(f"🟣 **Consideration KPIs (purple):** {', '.join(existing_cons_cols)}")
+
+    if highlight_msgs:
+        st.warning("  \n".join(highlight_msgs))
+
+        # Define color function based on column category
+        def get_colors(column):
+            if column.name in existing_conv_cols:
+                return ['background-color: #FFA500'] * len(column)  # Orange
+            elif column.name in existing_cons_cols:
+                return ['background-color: #C896C8'] * len(column)  # Light purple
+            else:
+                return [''] * len(column)  # No highlight
 
         # Apply pandas styling to highlight columns
-        display_df = filtered_df.style.apply(lambda x: ['background-color: #FFA500' if x.name in existing_conv_cols else '' for i in x], axis=0)
+        display_df = filtered_df.style.apply(get_colors, axis=0)
 
         st.dataframe(display_df, use_container_width=True)
     else:
