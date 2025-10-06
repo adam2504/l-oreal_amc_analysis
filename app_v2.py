@@ -109,9 +109,28 @@ def data_upload_tab():
         # Filter columns based on video option
         df_filtered = df
         if not has_video:
+            # Remove video-related columns
             video_cols = [col for col in df.columns if 'video' in col.lower()]
             if video_cols:
                 df_filtered = df.drop(columns=video_cols)
+
+            # Remove ALL KPI columns between 'description' and 'reach' (inclusive)
+            # Keep everything up to 'description', then start from 'reach' onwards
+            if 'description' in df_filtered.columns and 'reach' in df_filtered.columns:
+                cols_to_keep = []
+                keep_mode = True  # Start in keep mode (before description)
+
+                for col in df_filtered.columns:
+                    if col == 'description':
+                        cols_to_keep.append(col)  # Keep description
+                        keep_mode = False  # Switch to remove mode after description
+                    elif col == 'reach':
+                        keep_mode = True  # Switch back to keep mode from reach
+                        cols_to_keep.append(col)  # Keep reach
+                    elif keep_mode:
+                        cols_to_keep.append(col)  # Keep columns in keep mode
+
+                df_filtered = df_filtered[cols_to_keep]
 
         st.session_state.data = df_filtered
 
