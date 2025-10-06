@@ -323,10 +323,10 @@ def data_table_tab():
                         unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
 
                         fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
-                    except:
-                        # Fallback in case of error
-                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating Venn diagram", height=300)
+                    except Exception as e:
+                        # Fallback in case of error - show exact error
+                        fig = go.Figure(data=[go.Bar(x=['DEBUG ERROR'], y=[1])])
+                        fig.update_layout(title=f"Error: {str(e)[:100]}", height=300)
 
                 elif analysis_level_filter == 'Path to conversion':
                     # Extract steps from conversion path
@@ -583,10 +583,10 @@ def media_mix_tab():
                         unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
 
                         fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
-                    except:
-                        # Fallback in case of error
-                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating Venn diagram", height=300)
+                    except Exception as e:
+                        # Fallback in case of error - show exact error
+                        fig = go.Figure(data=[go.Bar(x=['DEBUG ERROR'], y=[1])])
+                        fig.update_layout(title=f"Error: {str(e)[:100]}", height=300)
 
                 st.plotly_chart(fig, config={'responsive': True}, key=f"media_mix_chart_{idx}")
 
@@ -896,11 +896,16 @@ def create_venn_diagram(channels, color_dict):
     # Number of channels
     n_channels = len(channels)
 
+    if n_channels == 0:
+        fig.update_layout(title="No channels found", height=300)
+        return fig
+
     # Position circles in a pattern that keeps them circular
     if n_channels == 1:
         # Single large circle
         centers = [[0, 0]]
         radius = 1.5
+        axis_range = [-3, 3]
     elif n_channels == 2:
         # Two side-by-side circles, non-overlapping
         centers = [[-0.8, 0], [0.8, 0]]
