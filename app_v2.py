@@ -322,12 +322,7 @@ def data_table_tab():
                         matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
                         unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
 
-                        if len(unique_channels) >= 2:
-                            # Create Venn diagram visualization
-                            fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
-                        else:
-                            # Fallback: simple channel display
-                            fig = create_single_channel_display(unique_channels, st.session_state.channel_colors)
+                        fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
                     except:
                         # Fallback in case of error
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
@@ -362,7 +357,7 @@ def data_table_tab():
                         showlegend=False
                     )
 
-                st.plotly_chart(fig, config={'responsive': True})
+                st.plotly_chart(fig, config={'responsive': True}, key=f"data_workspace_chart_{idx}")
 
     # Statistics
     if len(filtered_df) > 0:
@@ -587,18 +582,13 @@ def media_mix_tab():
                         matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
                         unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
 
-                        if len(unique_channels) >= 2:
-                            # Create Venn diagram visualization
-                            fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
-                        else:
-                            # Fallback: simple channel display
-                            fig = create_single_channel_display(unique_channels, st.session_state.channel_colors)
+                        fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
                     except:
                         # Fallback in case of error
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
                         fig.update_layout(title="Error creating Venn diagram", height=300)
 
-                st.plotly_chart(fig, config={'responsive': True})
+                st.plotly_chart(fig, config={'responsive': True}, key=f"media_mix_chart_{idx}")
 
 
 def path_to_conversion_tab():
@@ -804,7 +794,7 @@ def path_to_conversion_tab():
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
                         fig.update_layout(title="Error creating chevron diagram", height=300)
 
-                st.plotly_chart(fig, config={'responsive': True})
+                st.plotly_chart(fig, config={'responsive': True}, key=f"path_to_conversion_chart_{idx}")
 
 
 def create_simple_path_diagram(channels, color_dict):
@@ -993,49 +983,6 @@ def create_venn_diagram(channels, color_dict):
 
     # Force equal aspect ratio to keep circles perfectly round
     fig.update_yaxes(scaleanchor="x", scaleratio=1)
-
-    return fig
-
-def create_single_channel_display(channels, color_dict):
-    """
-    Create a simple display with a centered circle for single channel or fallback
-    """
-    fig = go.Figure()
-
-    if channels:
-        channel = channels[0]
-        color = color_dict.get(channel, '#1f77b4')
-
-        # Create a centered circle
-        fig.add_shape(type="circle",
-                     x0=-0.5, y0=-0.5, x1=0.5, y1=0.5,
-                     fillcolor=color, opacity=0.7, line=dict(width=3, color=color))
-
-        # Add channel text in center of circle
-        fig.add_annotation(
-            x=0, y=0,
-            text=channel,
-            showarrow=False,
-            font=dict(size=14, color='white', weight='bold'),
-            xanchor='center',
-            yanchor='middle'
-        )
-
-        fig.update_layout(
-            height=900,
-            width=900,  # Square aspect ratio for perfect circle
-            showlegend=False,
-            plot_bgcolor='rgba(0,0,0,0)'  # Transparent background
-        )
-
-        # Force equal aspect ratio to ensure perfect circle shape
-        fig.update_yaxes(scaleanchor="x", scaleratio=1)
-    else:
-        fig.update_layout(title="No channels found", height=300)
-
-    # Hide axes
-    fig.update_xaxes(showticklabels=False, showgrid=False, zeroline=False, visible=False)
-    fig.update_yaxes(showticklabels=False, showgrid=False, zeroline=False, visible=False)
 
     return fig
 
