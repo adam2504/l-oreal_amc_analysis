@@ -296,6 +296,53 @@ def data_table_tab():
 
     st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
 
+    # Column selection for export/download
+    st.subheader("🔽 Data Export")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        selected_columns = st.multiselect(
+            "Select columns to export",
+            options=list(filtered_df.columns),
+            default=list(filtered_df.columns),  # All columns selected by default
+            key="export_column_selection"
+        )
+
+    with col2:
+        export_format = st.selectbox(
+            "Export format",
+            options=["CSV", "Excel"],
+            index=0,
+            key="export_format"
+        )
+
+    # Create export data with selected columns
+    export_df = filtered_df[selected_columns] if selected_columns else pd.DataFrame()
+
+    if not export_df.empty:
+        if export_format == "CSV":
+            csv_data = export_df.to_csv(index=False)
+            st.download_button(
+                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_csv_button"
+            )
+        else:  # Excel
+            # For Excel export, we would need to add openpyxl to requirements
+            csv_data = export_df.to_csv(index=False)  # Temporary, basic CSV for now
+            st.download_button(
+                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_excel_button",
+                help="Note: Currently exports as CSV with .xlsx extension. For true Excel export, add 'openpyxl' to requirements."
+            )
+
+    st.divider()  # Visual separator
+
     # Apply sorting if requested
     if sort_by != 'None':
         ascending = (sort_order == "Ascending")
@@ -594,6 +641,51 @@ def media_mix_tab():
     styled_df = display_df.style.apply(get_colors, axis=0)
     st.dataframe(styled_df)  # Autosize columns by default
 
+    # Column selection for export/download
+    st.subheader("🔽 Data Export")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        selected_columns = st.multiselect(
+            "Select columns to export",
+            options=list(display_df.columns),
+            default=list(display_df.columns[:11]),  # All columns selected by default
+            key="export_column_selection_media_mix"
+        )
+
+    with col2:
+        export_format = st.selectbox(
+            "Export format",
+            options=["CSV", "Excel"],
+            index=0,
+            key="export_format_media_mix"
+        )
+
+    # Create export data with selected columns
+    export_df = display_df[selected_columns] if selected_columns else pd.DataFrame()
+
+    if not export_df.empty:
+        if export_format == "CSV":
+            csv_data = export_df.to_csv(index=False)
+            st.download_button(
+                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_media_mix_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_csv_button_media_mix"
+            )
+        else:  # Excel
+            # For Excel export, we would need to add openpyxl to requirements
+            csv_data = export_df.to_csv(index=False)  # Temporary, basic CSV for now
+            st.download_button(
+                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_media_mix_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_excel_button_media_mix",
+                help="Note: Currently exports as CSV with .xlsx extension. For true Excel export, add 'openpyxl' to requirements."
+            )
+
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
 
     # Color picker for channels
@@ -797,6 +889,51 @@ def path_to_conversion_tab():
     # Apply pandas styling to highlight columns
     styled_df = display_df.style.apply(get_colors, axis=0)
     st.dataframe(styled_df)  # Autosize columns by default
+
+    # Column selection for export/download
+    st.subheader("🔽 Data Export")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        selected_columns = st.multiselect(
+            "Select columns to export",
+            options=list(display_df.columns),
+            default=list(display_df.columns[:11]),  # All columns selected by default
+            key="export_column_selection_path_to_conversion"
+        )
+
+    with col2:
+        export_format = st.selectbox(
+            "Export format",
+            options=["CSV", "Excel"],
+            index=0,
+            key="export_format_path_to_conversion"
+        )
+
+    # Create export data with selected columns
+    export_df = display_df[selected_columns] if selected_columns else pd.DataFrame()
+
+    if not export_df.empty:
+        if export_format == "CSV":
+            csv_data = export_df.to_csv(index=False)
+            st.download_button(
+                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_path_to_conversion_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_csv_button_path_to_conversion"
+            )
+        else:  # Excel
+            # For Excel export, we would need to add openpyxl to requirements
+            csv_data = export_df.to_csv(index=False)  # Temporary, basic CSV for now
+            st.download_button(
+                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_path_to_conversion_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_excel_button_path_to_conversion",
+                help="Note: Currently exports as CSV with .xlsx extension. For true Excel export, add 'openpyxl' to requirements."
+            )
 
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_path_to_conversion")
 
