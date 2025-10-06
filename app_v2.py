@@ -349,15 +349,18 @@ def data_table_tab():
                 key="download_csv_button"
             )
         else:  # Excel
-            # For Excel export, we would need to add openpyxl to requirements
-            csv_data = export_df.to_csv(index=False)  # Temporary, basic CSV for now
+            # Convert to Excel format using openpyxl
+            import io
+            buffer = io.BytesIO()
+            export_df.to_excel(buffer, index=False, engine='openpyxl')
+            excel_data = buffer.getvalue()
+
             st.download_button(
                 label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=csv_data,
+                data=excel_data,
                 file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel_button",
-                help="Note: Currently exports as CSV with .xlsx extension. For true Excel export, add 'openpyxl' to requirements."
+                key="download_excel_button"
             )
 
     st.divider()  # Visual separator
@@ -707,15 +710,18 @@ def media_mix_tab():
                 key="download_csv_button_media_mix"
             )
         else:  # Excel
-            # For Excel export, we would need to add openpyxl to requirements
-            csv_data = export_df.to_csv(index=False)  # Temporary, basic CSV for now
+            # Convert to Excel format using openpyxl
+            import io
+            buffer = io.BytesIO()
+            export_df.to_excel(buffer, index=False, engine='openpyxl')
+            excel_data = buffer.getvalue()
+
             st.download_button(
                 label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=csv_data,
+                data=excel_data,
                 file_name=f"amc_media_mix_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel_button_media_mix",
-                help="Note: Currently exports as CSV with .xlsx extension. For true Excel export, add 'openpyxl' to requirements."
+                key="download_excel_button_media_mix"
             )
 
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
@@ -965,15 +971,18 @@ def path_to_conversion_tab():
                 key="download_csv_button_path_to_conversion"
             )
         else:  # Excel
-            # For Excel export, we would need to add openpyxl to requirements
-            csv_data = export_df.to_csv(index=False)  # Temporary, basic CSV for now
+            # Convert to Excel format using openpyxl
+            import io
+            buffer = io.BytesIO()
+            export_df.to_excel(buffer, index=False, engine='openpyxl')
+            excel_data = buffer.getvalue()
+
             st.download_button(
                 label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=csv_data,
+                data=excel_data,
                 file_name=f"amc_path_to_conversion_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel_button_path_to_conversion",
-                help="Note: Currently exports as CSV with .xlsx extension. For true Excel export, add 'openpyxl' to requirements."
+                key="download_excel_button_path_to_conversion"
             )
 
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_path_to_conversion")
