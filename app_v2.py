@@ -410,7 +410,11 @@ def data_table_tab():
 
     # Apply pandas styling to highlight columns
     styled_df = display_df.style.apply(get_colors, axis=0)
-    st.dataframe(styled_df)  # Autosize columns by default
+    # Column configuration for constrained width (max ~20 characters)
+    column_config = {
+        col: st.column_config.Column(width=150) for col in display_df.columns
+    }
+    st.dataframe(styled_df, column_config=column_config)
 
     # Display plots separately if generated
     if generate_plots:
@@ -662,7 +666,11 @@ def media_mix_tab():
 
     # Apply pandas styling to highlight columns
     styled_df = display_df.style.apply(get_colors, axis=0)
-    st.dataframe(styled_df)  # Autosize columns by default
+    # Column configuration for constrained width (max ~20 characters)
+    column_config = {
+        col: st.column_config.Column(width=150) for col in display_df.columns
+    }
+    st.dataframe(styled_df, column_config=column_config)
 
     # Column selection for export/download
     st.subheader("🔽 Data Export")
@@ -915,7 +923,11 @@ def path_to_conversion_tab():
 
     # Apply pandas styling to highlight columns
     styled_df = display_df.style.apply(get_colors, axis=0)
-    st.dataframe(styled_df)  # Autosize columns by default
+    # Column configuration for constrained width (max ~20 characters)
+    column_config = {
+        col: st.column_config.Column(width=150) for col in display_df.columns
+    }
+    st.dataframe(styled_df, column_config=column_config)
 
     # Column selection for export/download
     st.subheader("🔽 Data Export")
