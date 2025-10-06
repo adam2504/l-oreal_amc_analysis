@@ -799,7 +799,51 @@ def path_to_conversion_tab():
 
 def create_simple_path_diagram(channels, color_dict):
     """
-    Create a simple flow diagram with squares for each channel connected by arrows
+    Create a simple flow diagram with HUGE squares for each channel connected by arrows.
+
+    FONCTIONNEMENT DÉTAILLÉ :
+    =========================
+    Cette fonction crée un diagramme de flux horizontal montrant le chemin de conversion :
+    CANAL1 → CANAL2 → CANAL3 → ... CANAL_N
+
+    ÉTAPES PRINCIPALES :
+    ====================
+    1. INITIALISATION : fig = go.Figure() (canevas plotly vide)
+
+    2. CALCUL DU NOMBRE DE CANAUX : n_channels = len(channels)
+       - Si 0 canaux : retourne un graphe vide avec message d'erreur
+
+    3. CRÉATION DES CARRÉS ENORMES (4x plus grands) :
+       - Pour chaque canal i dans channels :
+       - Position x_start = i * 8.0  # Espacement énorme entre carrés
+       - Dimensions du carré : largeur=6.0, hauteur=6.0 (au lieu d'1.5x1.5)
+       - Couleur récupérée depuis color_dict[channel] ou palette par défaut
+
+    4. DESSINER LE CARRÉ :
+       - Utilise go.Scatter avec mode='lines' et fill='toself'
+       - Définit les 4 coins du carré + couleur de fond
+       - Aucun hover, pas de légende pour rester épuré
+
+    5. AJOUTER LE TEXTE DU CANAL :
+       - Annotation annotée au centre du carré : x_start + 3.0, y=0
+       - Texte blanc en gras pour contraste avec couleur de fond
+
+    6. AJOUTER LES FLÈCHES ENTRE CARRÉS :
+       - Si n_channels > 1 : créer des flèches "→" entre chaque paire
+       - Position : (i+1) * 8.0 - 3.5 (centré entre deux carrés)
+       - Taille de police 48 (énorme pour matcher les carrés géants)
+
+    7. RÉGLER LES DIMENSIONS DU GRAPHE :
+       - Largeur calculée = n_channels * 8.0 + marges (énorme pour tout contenir)
+       - Hauteur fixe = 400 (agrandie pour voir les carrés géants)
+       - Axes : rangées=[-8, 8] pour cadres les carrés qui vont de y=-3 à y=3
+
+    8. MASQUER LES AXES :
+       - showticklabels=False, showgrid=False, visible=False
+       - Conserver scaleanchor="x" pour aspect ratio carré si besoin
+
+    RETOUR : fig complète prête à être affichée par st.plotly_chart()
+    ==================================================================
     """
     fig = go.Figure()
 
@@ -809,82 +853,91 @@ def create_simple_path_diagram(channels, color_dict):
         fig.update_layout(title="No channels found", height=300)
         return fig
 
-    # Create squares for each channel
+    # Create HUGE squares for each channel (4x larger !!!)
     for i, channel in enumerate(channels):
-        x_start = i * 1.5  # Space squares horizontally
+        x_start = i * 8.0  # Massive spacing between squares
 
-        # Create square shape
-        square_x = [x_start, x_start + 1, x_start + 1, x_start]
-        square_y = [-0.5, -0.5, 0.5, 0.5]
+        # Create GIGANTIC square shape (6x6 instead of 1.5x1.5)
+        # Scaling factor: x4 width and height
+        square_x = [x_start, x_start + 6.0, x_start + 6.0, x_start]
+        square_y = [-3.0, -3.0, 3.0, 3.0]  # Height doubled accordingly
 
         color = color_dict.get(channel, DEFAULT_COLORS[i % len(DEFAULT_COLORS)])
 
-        # Add filled square
+        # Add filled gigantic square
         fig.add_trace(go.Scatter(
-            x=square_x + [square_x[0]],  # Close the square
+            x=square_x + [square_x[0]],  # Close the square (5 points needed for closed shape)
             y=square_y + [square_y[0]],
-            fill="toself",
-            fillcolor=color,
-            mode='lines',
-            line=dict(color=color, width=3),
-            hoverinfo='skip',
-            showlegend=False
+            fill="toself",              # Fill the polygon formed by the points
+            fillcolor=color,            # Use channel-specific color
+            mode='lines',               # Draw only the outline, but 'fill' fills it
+            line=dict(color=color, width=5), # Thicker borders for HUGE squares
+            hoverinfo='skip',           # No hover tooltips (clean)
+            showlegend=False            # No legend needed (single unlabeled shape)
         ))
 
-        # Add channel text in center of square
+        # Add channel text in center of GIGANTIC square
         fig.add_annotation(
-            x=x_start + 0.5,  # Center of square
-            y=0,  # Middle vertically
-            text=channel,
-            showarrow=False,
-            font=dict(size=10, color='white', weight='bold'),
-            xanchor='center',
-            yanchor='middle'
+            x=x_start + 3.0,  # Center of 6.0-wide square
+            y=0,               # Middle vertically (within -3 to +3 range)
+            text=channel,      # Channel name text
+            showarrow=False,   # No arrow from annotation to point
+            font=dict(size=16, color='white', weight='bold'), # Larger font for HUGE squares
+            xanchor='center',  # Center text horizontally on x position
+            yanchor='middle'   # Center text vertically on y position
         )
 
-    # Add arrows between squares if more than one channel
+    # Add MASSIVE arrows between GIGANTIC squares if more than one channel
     if n_channels > 1:
         for i in range(n_channels - 1):
-            arrow_x = (i + 1) * 1.5 - 0.25  # Position between squares
+            # Position arrow exactly BETWEEN squares: midway between right edge of square i and left edge of square i+1
+            # Square i ends at: i * 8.0 + 6.0
+            # Square i+1 starts at: (i+1) * 8.0
+            # Perfect mid-point: 8*i + 7.0 (thus offset: (i+1)*8.0 - 1.0)
+            arrow_x = (i + 1) * 8.0 - 1.0  # Perfect centering between MASSIVE squares
             fig.add_annotation(
                 x=arrow_x,
-                y=0,
-                text="→",
+                y=0,  # Same y position as square centers
+                text="→",  # Unicode right arrow
                 showarrow=False,
-                font=dict(size=24, color='black'),
+                font=dict(size=48, color='black'),  # MASSIVE font size to match HUGE squares
                 xanchor='center',
                 yanchor='middle'
             )
 
-    # Set axis ranges to fit all squares and arrows
-    x_margin = 0.5
-    width_needed = n_channels * 1.5 + x_margin * 2
+    # Set MASSIVE axis ranges to fit all GIGANTIC squares and arrows
+    # Axis ranges need to accommodate squares from y=-3 to y=3
+    # x range: from 0 to (n_channels-1)*8.0 + 6.0 (last square goes to its right edge)
+    x_axis_max = (n_channels - 1) * 8.0 + 6.0 + 4.0  # +4 additional margin
+    x_axis_min = -4.0  # Left margin
 
     fig.update_layout(
-        height=200,
-        width=max(400, int(width_needed * 80)),  # Calculate width based on number of channels
+        height=600,  # Triple height to show HUGE squares properly
+        width=max(800, int(x_axis_max * 80)),  # Width calculated for all HUGE squares + arrows
         showlegend=False,
         plot_bgcolor='white',
         paper_bgcolor='white'
     )
 
-    # Hide axes
+    # Configure axes - MASSIVE ranges to fit everything
     fig.update_xaxes(
+        range=[x_axis_min, x_axis_max],  # Massive x range to fit all HUGE squares
         showticklabels=False,
         showgrid=False,
         zeroline=False,
         visible=False
     )
     fig.update_yaxes(
+        range=[-8.0, 8.0],  # Massive y range [-8,8] to frame HUGE squares [-3,+3]
         showticklabels=False,
         showgrid=False,
         zeroline=False,
         visible=False,
-        scaleanchor="x",
+        scaleanchor="x",  # Maintain square aspect ratio
         scaleratio=1
     )
 
-    return fig
+    return fig  # Return complete plotly figure
 
 
 def create_venn_diagram(channels, color_dict):
