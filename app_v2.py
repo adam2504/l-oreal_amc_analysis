@@ -551,9 +551,10 @@ def media_mix_tab():
         granularity_options = df['granularity'].dropna().unique()
         if len(granularity_options) > 0:
             # Default to "format" if available, otherwise first option
-            default_index = 0
-            if "format" in granularity_options:
-                default_index = list(granularity_options).index("format")
+            if "Format" in granularity_options:
+                default_index = list(granularity_options).index("Format")
+            else:
+                default_index = 0
             granularity_filter = st.selectbox(
                 "Granularity",
                 options=granularity_options,
@@ -810,9 +811,10 @@ def path_to_conversion_tab():
         granularity_options = df['granularity'].dropna().unique()
         if len(granularity_options) > 0:
             # Default to "format" if available, otherwise first option
-            default_index = 0
-            if "format" in granularity_options:
-                default_index = list(granularity_options).index("format")
+            if "Format" in granularity_options:
+                default_index = list(granularity_options).index("Format")
+            else:
+                default_index = 0
             granularity_filter = st.selectbox(
                 "Granularity",
                 options=granularity_options,
