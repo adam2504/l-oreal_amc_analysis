@@ -412,7 +412,7 @@ def data_table_tab():
     styled_df = display_df.style.apply(get_colors, axis=0)
     # Column configuration for constrained width (max ~20 characters)
     column_config = {
-        col: st.column_config.Column(width=150) for col in display_df.columns
+        col: st.column_config.Column(width=110) for col in display_df.columns
     }
     st.dataframe(styled_df, column_config=column_config)
 
@@ -668,7 +668,7 @@ def media_mix_tab():
     styled_df = display_df.style.apply(get_colors, axis=0)
     # Column configuration for constrained width (max ~20 characters)
     column_config = {
-        col: st.column_config.Column(width=150) for col in display_df.columns
+        col: st.column_config.Column(width=110) for col in display_df.columns
     }
     st.dataframe(styled_df, column_config=column_config)
 
@@ -925,7 +925,7 @@ def path_to_conversion_tab():
     styled_df = display_df.style.apply(get_colors, axis=0)
     # Column configuration for constrained width (max ~20 characters)
     column_config = {
-        col: st.column_config.Column(width=150) for col in display_df.columns
+        col: st.column_config.Column(width=110) for col in display_df.columns
     }
     st.dataframe(styled_df, column_config=column_config)
 
