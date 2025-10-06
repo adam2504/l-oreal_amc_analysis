@@ -985,7 +985,6 @@ def create_venn_diagram(channels, color_dict):
     )
 
     fig.update_layout(
-        title="Media Mix Channels",
         height=900,
         width=900,  # Square aspect ratio to ensure circular shapes
         showlegend=False,
@@ -999,7 +998,7 @@ def create_venn_diagram(channels, color_dict):
 
 def create_single_channel_display(channels, color_dict):
     """
-    Create a simple display for single channel or fallback
+    Create a simple display with a centered circle for single channel or fallback
     """
     fig = go.Figure()
 
@@ -1007,12 +1006,12 @@ def create_single_channel_display(channels, color_dict):
         channel = channels[0]
         color = color_dict.get(channel, '#1f77b4')
 
-        # Create a simple colored rectangle
-        fig.add_shape(type="rect",
+        # Create a centered circle
+        fig.add_shape(type="circle",
                      x0=-0.5, y0=-0.5, x1=0.5, y1=0.5,
-                     fillcolor=color, opacity=0.7, line=dict(width=0))
+                     fillcolor=color, opacity=0.7, line=dict(width=3, color=color))
 
-        # Add channel text
+        # Add channel text in center of circle
         fig.add_annotation(
             x=0, y=0,
             text=channel,
@@ -1023,11 +1022,14 @@ def create_single_channel_display(channels, color_dict):
         )
 
         fig.update_layout(
-            height=300,
-            width=400,
+            height=900,
+            width=900,  # Square aspect ratio for perfect circle
             showlegend=False,
-            plot_bgcolor='white'
+            plot_bgcolor='rgba(0,0,0,0)'  # Transparent background
         )
+
+        # Force equal aspect ratio to ensure perfect circle shape
+        fig.update_yaxes(scaleanchor="x", scaleratio=1)
     else:
         fig.update_layout(title="No channels found", height=300)
 
