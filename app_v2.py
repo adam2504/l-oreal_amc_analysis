@@ -338,14 +338,14 @@ def data_table_tab():
                     try:
                         matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
                         if matches:
-                            fig = create_chevron_diagram(matches, st.session_state.channel_colors)
+                            fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
                         else:
                             fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
                             fig.update_layout(title="No conversion path found", height=300)
                     except:
                         # Fallback in case of error
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating chevron diagram", height=300)
+                        fig.update_layout(title="Error creating path diagram", height=300)
 
                 else:
                     # For other analysis levels: dummy test data
@@ -603,14 +603,14 @@ def media_mix_tab():
                     try:
                         matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
                         if matches:
-                            fig = create_chevron_diagram(matches, st.session_state.channel_colors)
+                            fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
                         else:
                             fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
                             fig.update_layout(title="No conversion path found", height=300)
                     except:
                         # Fallback in case of error
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating chevron diagram", height=300)
+                        fig.update_layout(title="Error creating path diagram", height=300)
 
                 else:
                     # For other analysis levels: dummy test data
@@ -840,7 +840,7 @@ def path_to_conversion_tab():
                     try:
                         matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
                         if matches:
-                            fig = create_chevron_diagram(matches, st.session_state.channel_colors)
+                            fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
                         else:
                             fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
                             fig.update_layout(title="No conversion path found", height=300)
@@ -864,6 +864,96 @@ def path_to_conversion_tab():
                         showlegend=False
                     )
                 st.plotly_chart(fig, config={'responsive': True})
+
+
+def create_simple_path_diagram(channels, color_dict):
+    """
+    Create a simple flow diagram with squares for each channel connected by arrows
+    """
+    fig = go.Figure()
+
+    n_channels = len(channels)
+
+    if n_channels == 0:
+        fig.update_layout(title="No channels found", height=300)
+        return fig
+
+    # Create squares for each channel
+    for i, channel in enumerate(channels):
+        x_start = i * 1.5  # Space squares horizontally
+
+        # Create square shape
+        square_x = [x_start, x_start + 1, x_start + 1, x_start]
+        square_y = [-0.5, -0.5, 0.5, 0.5]
+
+        color = color_dict.get(channel, DEFAULT_COLORS[i % len(DEFAULT_COLORS)])
+
+        # Add filled square
+        fig.add_trace(go.Scatter(
+            x=square_x + [square_x[0]],  # Close the square
+            y=square_y + [square_y[0]],
+            fill="toself",
+            fillcolor=color,
+            mode='lines',
+            line=dict(color=color, width=3),
+            hoverinfo='skip',
+            showlegend=False
+        ))
+
+        # Add channel text in center of square
+        fig.add_annotation(
+            x=x_start + 0.5,  # Center of square
+            y=0,  # Middle vertically
+            text=channel,
+            showarrow=False,
+            font=dict(size=10, color='white', weight='bold'),
+            xanchor='center',
+            yanchor='middle'
+        )
+
+    # Add arrows between squares if more than one channel
+    if n_channels > 1:
+        for i in range(n_channels - 1):
+            arrow_x = (i + 1) * 1.5 - 0.25  # Position between squares
+            fig.add_annotation(
+                x=arrow_x,
+                y=0,
+                text="→",
+                showarrow=False,
+                font=dict(size=24, color='black'),
+                xanchor='center',
+                yanchor='middle'
+            )
+
+    # Set axis ranges to fit all squares and arrows
+    x_margin = 0.5
+    width_needed = n_channels * 1.5 + x_margin * 2
+
+    fig.update_layout(
+        height=200,
+        width=max(400, int(width_needed * 80)),  # Calculate width based on number of channels
+        showlegend=False,
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
+
+    # Hide axes
+    fig.update_xaxes(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False,
+        visible=False
+    )
+    fig.update_yaxes(
+        showticklabels=False,
+        showgrid=False,
+        zeroline=False,
+        visible=False,
+        scaleanchor="x",
+        scaleratio=1
+    )
+
+    return fig
 
 
 def create_venn_diagram(channels, color_dict):
@@ -1003,123 +1093,6 @@ def create_single_channel_display(channels, color_dict):
     # Hide axes
     fig.update_xaxes(showticklabels=False, showgrid=False, zeroline=False, visible=False)
     fig.update_yaxes(showticklabels=False, showgrid=False, zeroline=False, visible=False)
-
-    return fig
-
-def create_chevron_diagram(steps, color_dict):
-    """
-    Create a chevron process diagram for conversion paths
-    Shows the flow: Step 1 → Step 2 → Step 3 → ...
-    """
-    fig = go.Figure()
-
-    n_steps = len(steps)
-    if n_steps == 0:
-        fig.update_layout(title="No steps in path", height=300)
-        return fig
-
-    # Calculate positions for chevrons along the flow
-    step_positions = []
-    for i in range(n_steps):
-        x_pos = i * 2.0  # Space chevrons horizontally
-        y_pos = 0
-        step_positions.append((x_pos, y_pos))
-
-    # Create chevron shapes for each step
-    for i, (step, (x_pos, y_pos)) in enumerate(zip(steps, step_positions)):
-        color = color_dict.get(step, DEFAULT_COLORS[i % len(DEFAULT_COLORS)])
-
-        # Create chevron shape (arrow pointing right)
-        chevron_width = 1.6
-        chevron_height = 1.2
-
-        # Chevron points: left triangle sloping to right
-        chevron_points = [
-            [x_pos - chevron_width, y_pos],                    # Left point
-            [x_pos - chevron_width/4, y_pos + chevron_height/2],  # Top middle
-            [x_pos + chevron_width, y_pos],                    # Right point (tip)
-            [x_pos - chevron_width/4, y_pos - chevron_height/2],  # Bottom middle
-        ]
-
-        # Close the shape
-        chevron_points.append(chevron_points[0])
-
-        # Extract x and y coordinates for the shape
-        chevron_x = [pt[0] for pt in chevron_points]
-        chevron_y = [pt[1] for pt in chevron_points]
-
-        # Add filled chevron shape
-        fig.add_trace(go.Scatter(
-            x=chevron_x,
-            y=chevron_y,
-            fill="toself",
-            fillcolor=color,
-            mode='lines',
-            line=dict(color=color, width=2),
-            hoverinfo='skip',
-            showlegend=False
-        ))
-
-        # Add step text inside chevron
-        fig.add_annotation(
-            x=x_pos,
-            y=y_pos,
-            text=step,
-            showarrow=False,
-            font=dict(size=10, color='white', weight='bold'),
-            xanchor='center',
-            yanchor='middle'
-        )
-
-    # Add arrows between steps
-    if n_steps > 1:
-        for i in range(n_steps - 1):
-            start_x = step_positions[i][0] + chevron_width - chevron_width/4
-            end_x = step_positions[i+1][0] - chevron_width + chevron_width/4
-            center_x = (start_x + end_x) / 2
-
-            # Add arrow line
-            fig.add_annotation(
-                x=center_x,
-                y=0,
-                text="→",
-                showarrow=False,
-                font=dict(size=20, color='black'),
-                xanchor='center',
-                yanchor='middle'
-            )
-
-    # Set axis ranges to fit all chevrons and arrows
-    x_min = -1.5
-    x_max = (n_steps - 1) * 2.0 + 1.5
-    y_min = -1.5
-    y_max = 1.5
-
-    fig.update_layout(
-        height=400,
-        width=max(600, n_steps * 150),  # Adjust width based on number of steps
-        showlegend=False,
-        plot_bgcolor='white',
-        paper_bgcolor='white'
-    )
-
-    # Configure axes
-    fig.update_xaxes(
-        range=[x_min, x_max],
-        showticklabels=False,
-        showgrid=False,
-        zeroline=False,
-        visible=False
-    )
-    fig.update_yaxes(
-        range=[y_min, y_max],
-        showticklabels=False,
-        showgrid=False,
-        zeroline=False,
-        visible=False,
-        scaleanchor="x",  # Ensure square aspect ratio
-        scaleratio=1
-    )
 
     return fig
 
