@@ -1107,8 +1107,17 @@ def create_simple_path_diagram(channels, color_dict):
         zeroline=False,
         visible=False
     )
+
+    # Special y-axis range for 3 channels to make squares appear BIGGER
+    # For 3 channels, we use [-2.5, 2.5] instead of [-8,8] to zoom in visually
+    # This makes the 6x6 squares (which are actually [-3,+3]) appear much larger on screen
+    if n_channels == 3:
+        y_axis_range = [-3.5, 3.5]  # Zoom in for 3 channels - makes squares WAY bigger
+    else:
+        y_axis_range = [-4, 4]  # Normal zoom for 1,2,4+ channels
+
     fig.update_yaxes(
-        range=[-8.0, 8.0],  # Massive y range [-8,8] to frame HUGE squares [-3,+3]
+        range=y_axis_range,  # Adaptive y range: zoomed in for 3 channels, normal for others
         showticklabels=False,
         showgrid=False,
         zeroline=False,
