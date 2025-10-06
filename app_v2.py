@@ -128,11 +128,11 @@ def data_upload_tab():
         total_sales = df['product_sales'].sum()
 
         with col1:
-            st.metric("Total Spend", f"${total_spend:,.0f}")
+            st.metric("Total Spend", f"{total_spend:,.0f} €")
         with col2:
             st.metric("Total Purchases", f"{total_purchases:,.0f}")
         with col3:
-            st.metric("Total Sales", f"${total_sales:,.0f}")
+            st.metric("Total Sales", f"{total_sales:,.0f} €")
         with col4:
             roas = total_sales / total_spend if total_spend > 0 else 0
             st.metric("Overall ROAS", f"{roas:.2f}")
