@@ -598,34 +598,6 @@ def media_mix_tab():
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
                         fig.update_layout(title="Error creating Venn diagram", height=300)
 
-                elif analysis_level_filter == 'Path to conversion':
-                    # Extract steps from conversion path
-                    try:
-                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
-                        if matches:
-                            fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
-                        else:
-                            fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
-                            fig.update_layout(title="No conversion path found", height=300)
-                    except:
-                        # Fallback in case of error
-                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating path diagram", height=300)
-
-                else:
-                    # For other analysis levels: dummy test data
-                    dummy_data = np.random.randint(10, 100, size=5)
-                    plot_labels = ['Metric 1', 'Metric 2', 'Metric 3', 'Metric 4', 'Metric 5']
-
-                    fig = go.Figure(data=[go.Bar(x=plot_labels, y=dummy_data)])
-                    fig.update_layout(
-                        title=f"Path: {path_clean} - KPIs",
-                        xaxis_title="Metrics",
-                        yaxis_title="Values",
-                        width=600,
-                        height=300,
-                        showlegend=False
-                    )
                 st.plotly_chart(fig, config={'responsive': True})
 
 
@@ -818,24 +790,7 @@ def path_to_conversion_tab():
 
             with st.expander(f"📈 Chart for Path: {path_clean}", expanded=False):
                 # Create diagrams based on analysis level
-                if analysis_level_filter == 'Media Mix':
-                    # Extract channels from path
-                    try:
-                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
-                        unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
-
-                        if len(unique_channels) >= 2:
-                            # Create Venn diagram visualization
-                            fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
-                        else:
-                            # Fallback: simple channel display
-                            fig = create_single_channel_display(unique_channels, st.session_state.channel_colors)
-                    except:
-                        # Fallback in case of error
-                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating Venn diagram", height=300)
-
-                elif analysis_level_filter == 'Path to conversion':
+                if analysis_level_filter == 'Path to conversion':
                     # Extract steps from conversion path
                     try:
                         matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
@@ -849,20 +804,6 @@ def path_to_conversion_tab():
                         fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
                         fig.update_layout(title="Error creating chevron diagram", height=300)
 
-                else:
-                    # For other analysis levels: dummy test data
-                    dummy_data = np.random.randint(10, 100, size=5)
-                    plot_labels = ['Metric 1', 'Metric 2', 'Metric 3', 'Metric 4', 'Metric 5']
-
-                    fig = go.Figure(data=[go.Bar(x=plot_labels, y=dummy_data)])
-                    fig.update_layout(
-                        title=f"Path: {path_clean} - KPIs",
-                        xaxis_title="Metrics",
-                        yaxis_title="Values",
-                        width=600,
-                        height=300,
-                        showlegend=False
-                    )
                 st.plotly_chart(fig, config={'responsive': True})
 
 
