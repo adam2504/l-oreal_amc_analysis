@@ -1062,7 +1062,7 @@ def create_simple_path_diagram(channels, color_dict):
             y=0,               # Middle vertically (within -3 to +3 range)
             text=channel,      # Channel name text
             showarrow=False,   # No arrow from annotation to point
-            font=dict(size=16, color='white', weight='bold'), # Larger font for HUGE squares
+            font=dict(size=20, color='white', weight='bold'), # Larger font for HUGE squares
             xanchor='center',  # Center text horizontally on x position
             yanchor='middle'   # Center text vertically on y position
         )
