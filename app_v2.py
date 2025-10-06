@@ -28,7 +28,7 @@ def main():
     st.title("📊 AMC Analytics L'Oréal v2")
 
     # Tab layout
-    tab1, tab2, tab3, tab4 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📊 Media Mix", "📖 Documentation"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📊 Media Mix", "🔀 Path to Conversion", "📖 Documentation"])
 
     with tab1:
         data_upload_tab()
@@ -46,6 +46,12 @@ def main():
             st.info("Please upload a CSV file first")
 
     with tab4:
+        if st.session_state.data is not None:
+            path_to_conversion_tab()
+        else:
+            st.info("Please upload a CSV file first")
+
+    with tab5:
         documentation_tab()
 
 def data_upload_tab():
@@ -559,6 +565,243 @@ def media_mix_tab():
     for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
         with color_cols[i % 4]:
             new_color = st.color_picker(f"{channel}", color, key=f"media_mix_color_{channel}")
+            if new_color != color:
+                st.session_state.channel_colors[channel] = new_color
+
+    # Display plots separately if generated
+    if generate_plots:
+        st.subheader("📊 Charts for Each Row")
+        st.info(f"Displaying charts for the {len(display_df)} rows shown above")
+
+        # Create and display plots for each row
+        for idx, row in display_df.iterrows():
+            # Get the path from the row
+            path_value = str(row.get('path', f'Row {idx}'))
+            path_clean = path_value.replace('[', '').replace(']', '').strip()
+
+            with st.expander(f"📈 Chart for Path: {path_clean}", expanded=False):
+                # Create diagrams based on analysis level
+                if analysis_level_filter == 'Media Mix':
+                    # Extract channels from path
+                    try:
+                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
+                        unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
+
+                        if len(unique_channels) >= 2:
+                            # Create Venn diagram visualization
+                            fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
+                        else:
+                            # Fallback: simple channel display
+                            fig = create_single_channel_display(unique_channels, st.session_state.channel_colors)
+                    except:
+                        # Fallback in case of error
+                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
+                        fig.update_layout(title="Error creating Venn diagram", height=300)
+
+                elif analysis_level_filter == 'Path to conversion':
+                    # Extract steps from conversion path
+                    try:
+                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
+                        if matches:
+                            fig = create_chevron_diagram(matches, st.session_state.channel_colors)
+                        else:
+                            fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
+                            fig.update_layout(title="No conversion path found", height=300)
+                    except:
+                        # Fallback in case of error
+                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
+                        fig.update_layout(title="Error creating chevron diagram", height=300)
+
+                else:
+                    # For other analysis levels: dummy test data
+                    dummy_data = np.random.randint(10, 100, size=5)
+                    plot_labels = ['Metric 1', 'Metric 2', 'Metric 3', 'Metric 4', 'Metric 5']
+
+                    fig = go.Figure(data=[go.Bar(x=plot_labels, y=dummy_data)])
+                    fig.update_layout(
+                        title=f"Path: {path_clean} - KPIs",
+                        xaxis_title="Metrics",
+                        yaxis_title="Values",
+                        width=600,
+                        height=300,
+                        showlegend=False
+                    )
+                st.plotly_chart(fig, config={'responsive': True})
+
+
+def path_to_conversion_tab():
+    st.header("Path to Conversion")
+
+    df = st.session_state.data.copy()
+
+    # Extract path channels for filter
+    path_channels = set()
+    if 'path' in df.columns:
+        for path in df['path'].dropna():
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', path.upper())
+                path_channels.update(matches)
+            except:
+                pass
+    path_channels = sorted(list(path_channels))
+
+    # Fixed analysis level
+    analysis_level_filter = 'Path to conversion'
+
+    # Statistics (moved up)
+    if len(df[df['analysis_level'] == analysis_level_filter]) > 0:
+        filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
+        st.subheader("Quick Statistics")
+
+        numeric_cols = filtered_df_for_stats.select_dtypes(include=[np.number]).columns
+
+        if len(numeric_cols) > 0:
+            selected_metric = st.selectbox(
+                "Select metric for analysis",
+                options=numeric_cols,
+                index=min(10, len(numeric_cols)-1),  # Default to a metric column
+                key="path_to_conversion_overview_metric"
+            )
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(f"Average {selected_metric}",
+                         f"{filtered_df_for_stats[selected_metric].mean():.2f}")
+            with col2:
+                st.metric(f"Max {selected_metric}",
+                         f"{filtered_df_for_stats[selected_metric].max():.2f}")
+            with col3:
+                st.metric(f"Min {selected_metric}",
+                         f"{filtered_df_for_stats[selected_metric].min():.2f}")
+
+    # Filters
+    st.subheader("Filters")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        granularity_options = df['granularity'].dropna().unique()
+        if len(granularity_options) > 0:
+            granularity_filter = st.selectbox(
+                "Granularity",
+                options=granularity_options,
+                index=0,
+                key="path_to_conversion_granularity"
+            )
+        else:
+            granularity_filter = None
+
+    with col2:
+        brand_options = df['brand'].dropna().unique()
+        if len(brand_options) > 0:
+            brand_filter = st.selectbox(
+                "Brand",
+                options=brand_options,
+                index=0,
+                key="path_to_conversion_brand"
+            )
+        else:
+            brand_filter = None
+
+    with col3:
+        channel_filter = st.multiselect(
+            "Path Channel",
+            options=path_channels,
+            default=[],
+            key="path_to_conversion_channel"  # Start with no channels selected
+        )
+
+    # Apply filters
+    filtered_df = df.copy()
+    if analysis_level_filter:
+        filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
+    if granularity_filter:
+        filtered_df = filtered_df[filtered_df['granularity'] == granularity_filter]
+    if brand_filter:
+        filtered_df = filtered_df[filtered_df['brand'] == brand_filter]
+    if channel_filter:
+        def contains_selected_channels(path):
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                return all(channel in matches for channel in channel_filter)
+            except:
+                return False
+        filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
+
+    # Add sorting options and max rows
+    col1, col2 = st.columns(2)
+
+    with col1:
+        sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
+        sort_by = st.selectbox("Sort by column (descending)", options=sort_options, key="path_to_conversion_sort_by")
+
+    with col2:
+        if sort_by != 'None':
+            # Always sort in descending order when a column is selected
+            sort_order = "Descending"
+        else:
+            sort_order = "Descending"  # default
+
+        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="path_to_conversion_max_rows")
+
+    st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
+
+    # Apply sorting if requested
+    if sort_by != 'None':
+        ascending = (sort_order == "Ascending")
+        filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
+    else:
+        filtered_df_sorted = filtered_df
+
+    # Limit to max_rows for display and plots
+    display_df = filtered_df_sorted.head(max_rows)
+
+    # Display the table first (always, whether plots are generated or not)
+    # Highlight columns logic
+    conversion_columns = [
+        'user_purchased', 'product_sales', 'purchases', 'units_sold',
+        'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
+        'ntb_purchased', 'ntb_product_sales', 'ntb_purchases', 'ntb_units_sold',
+        'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
+    ]
+
+    consideration_columns = [
+        'Clicks', 'user_detail_page_view', 'detail_page_view', 'user_detail_page_view_clicks',
+        'detail_page_view_clicks', 'user_detail_page_view_views', 'detail_page_view_views',
+        'user_add_to_cart', 'add_to_cart', 'user_add_to_cart_clicks', 'add_to_cart_clicks',
+        'user_add_to_cart_views', 'add_to_cart_views', 'user_total_detail_page_view',
+        'total_detail_page_view', 'user_total_detail_page_view_clicks', 'total_detail_page_view_clicks',
+        'user_total_detail_page_view_views', 'total_detail_page_view_views', 'user_total_add_to_cart',
+        'total_add_to_cart', 'user_total_add_to_cart_clicks', 'total_add_to_cart_clicks',
+        'user_total_add_to_cart_views', 'total_add_to_cart_views'
+    ]
+
+    # Check which KPI columns exist
+    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
+    existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
+
+    # Display table with styling
+    # Define color function based on column category
+    def get_colors(column):
+        if column.name in existing_conv_cols:
+            return ['background-color: #FFA500'] * len(column)  # Orange
+        elif column.name in existing_cons_cols:
+            return ['background-color: #C896C8'] * len(column)  # Light purple
+        else:
+            return [''] * len(column)  # No highlight
+
+    # Apply pandas styling to highlight columns
+    styled_df = display_df.style.apply(get_colors, axis=0)
+    st.dataframe(styled_df)  # Autosize columns by default
+
+    generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_path_to_conversion")
+
+    # Color picker for channels
+    st.subheader("Channel Colors")
+    color_cols = st.columns(min(4, len(st.session_state.channel_colors)))
+
+    for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
+        with color_cols[i % 4]:
+            new_color = st.color_picker(f"{channel}", color, key=f"path_to_conversion_color_{channel}")
             if new_color != color:
                 st.session_state.channel_colors[channel] = new_color
 
