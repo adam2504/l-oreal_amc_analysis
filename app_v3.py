@@ -419,6 +419,26 @@ def data_upload_tab():
                     st.error(f"❌ Error processing data: {str(e)}")
                     return
 
+            # Extract channels from data for color initialization
+            channels = []
+            if 'channel' in df.columns:
+                channels.extend(df['channel'].dropna().unique())
+            if 'path' in df.columns:
+                for path in df['path'].dropna():
+                    try:
+                        # Extract channels from path like "[1/SEARCH, 2/DSP]"
+                        matches = re.findall(r'/(\w+(?:\s+\w+)*)', str(path))
+                        channels.extend(matches)
+                    except:
+                        pass
+
+            channels = list(set(channels))
+
+            # Initialize colors if not already done
+            for i, channel in enumerate(channels):
+                if channel not in st.session_state.channel_colors:
+                    st.session_state.channel_colors[channel] = DEFAULT_COLORS[i % len(DEFAULT_COLORS)]
+
         except Exception as e:
             st.error(f"❌ Unexpected error during file upload: {str(e)}")
             return
@@ -559,26 +579,6 @@ def preprocess_data(df):
 
     if 'purchases' in df.columns and 'impressions_cost' in df.columns:
         df['CPA'] = df['impressions_cost'] / df['purchases'].replace(0, np.nan)
-
-    # Extract channels from data for color initialization
-    channels = []
-    if 'channel' in df.columns:
-        channels.extend(df['channel'].dropna().unique())
-    if 'path' in df.columns:
-        for path in df['path'].dropna():
-            try:
-                # Extract channels from path like "[1/SEARCH, 2/DSP]"
-                matches = re.findall(r'/(\w+(?:\s+\w+)*)', str(path))
-                channels.extend(matches)
-            except:
-                pass
-
-    channels = list(set(channels))
-
-    # Initialize colors if not already done
-    for i, channel in enumerate(channels):
-        if channel not in st.session_state.channel_colors:
-            st.session_state.channel_colors[channel] = DEFAULT_COLORS[i % len(DEFAULT_COLORS)]
 
     return df
 
