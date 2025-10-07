@@ -332,30 +332,36 @@ def main():
     st.title("📊 AMC Analytics L'Oréal v3")
 
     # Tab layout
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📊 Media Mix", "🔀 Path to Conversion", "📖 Documentation"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📁 Data Upload", "📈 Campaign Summary", "📋 Data Workspace", "📊 Media Mix", "🔀 Path to Conversion", "📖 Documentation"])
 
     with tab1:
         data_upload_tab()
 
     with tab2:
         if st.session_state.data is not None:
-            data_table_tab()
+            campaign_summary_tab()
         else:
             st.info("Please upload a CSV file first")
 
     with tab3:
         if st.session_state.data is not None:
-            media_mix_tab()
+            data_table_tab()
         else:
             st.info("Please upload a CSV file first")
 
     with tab4:
         if st.session_state.data is not None:
-            path_to_conversion_tab()
+            media_mix_tab()
         else:
             st.info("Please upload a CSV file first")
 
     with tab5:
+        if st.session_state.data is not None:
+            path_to_conversion_tab()
+        else:
+            st.info("Please upload a CSV file first")
+
+    with tab6:
         documentation_tab()
 
 def data_upload_tab():
@@ -512,49 +518,6 @@ def data_upload_tab():
         st.subheader("Data Preview")
         st.dataframe(df_filtered.head(), width='stretch')
 
-        st.subheader("Campaign Summary")
-
-        # Overall metrics
-        col1, col2, col3, col4 = st.columns(4)
-
-        total_spend = df['impressions_cost'].sum()
-        total_purchases = df['purchases'].sum()
-        total_sales = df['product_sales'].sum()
-
-        with col1:
-            st.metric("Total Spend", f"{total_spend:,.0f} €")
-        with col2:
-            st.metric("Total Purchases", f"{total_purchases:,.0f}")
-        with col3:
-            st.metric("Total Sales", f"{total_sales:,.0f} €")
-        with col4:
-            roas = total_sales / total_spend if total_spend > 0 else 0
-            st.metric("Overall ROAS", f"{roas:.2f}")
-
-        # Channel performance
-        st.subheader("Channel Performance")
-        if 'channel' in df.columns:
-            channel_stats = df.groupby('channel').agg({
-                'impressions_cost': 'sum',
-                'purchases': 'sum',
-                'product_sales': 'sum'
-            }).reset_index()
-
-            channel_stats['ROAS'] = channel_stats['product_sales'] / channel_stats['impressions_cost']
-            channel_stats = channel_stats.sort_values('impressions_cost', ascending=False)
-
-            st.dataframe(channel_stats, width='stretch')
-
-            # Quick chart
-            fig = go.Figure(data=[
-                go.Bar(name='Spend', x=channel_stats['channel'], y=channel_stats['impressions_cost']),
-                go.Bar(name='Sales', x=channel_stats['channel'], y=channel_stats['product_sales'])
-            ])
-            fig.update_layout(barmode='group', title="Channel Spend vs Sales")
-            st.plotly_chart(fig, config={'responsive': True})
-        else:
-            st.info("Upload data to see campaign summary")
-
 @st.cache_data
 def preprocess_data(df):
     """Preprocess the uploaded data"""
@@ -638,6 +601,52 @@ def preprocess_data(df):
     # Keep natural column order (KPIs at the end as they are created)
 
     return df
+
+def campaign_summary_tab():
+    st.header("Campaign Summary")
+
+    df = st.session_state.data
+
+    # Overall metrics
+    col1, col2, col3, col4 = st.columns(4)
+
+    total_spend = df['impressions_cost'].sum()
+    total_purchases = df['purchases'].sum()
+    total_sales = df['product_sales'].sum()
+
+    with col1:
+        st.metric("Total Spend", f"{total_spend:,.0f} €")
+    with col2:
+        st.metric("Total Purchases", f"{total_purchases:,.0f}")
+    with col3:
+        st.metric("Total Sales", f"{total_sales:,.0f} €")
+    with col4:
+        roas = total_sales / total_spend if total_spend > 0 else 0
+        st.metric("Overall ROAS", f"{roas:.2f}")
+
+    # Channel performance
+    st.subheader("Channel Performance")
+    if 'channel' in df.columns:
+        channel_stats = df.groupby('channel').agg({
+            'impressions_cost': 'sum',
+            'purchases': 'sum',
+            'product_sales': 'sum'
+        }).reset_index()
+
+        channel_stats['ROAS'] = channel_stats['product_sales'] / channel_stats['impressions_cost']
+        channel_stats = channel_stats.sort_values('impressions_cost', ascending=False)
+
+        st.dataframe(channel_stats, width='stretch')
+
+        # Quick chart
+        fig = go.Figure(data=[
+            go.Bar(name='Spend', x=channel_stats['channel'], y=channel_stats['impressions_cost']),
+            go.Bar(name='Sales', x=channel_stats['channel'], y=channel_stats['product_sales'])
+        ])
+        fig.update_layout(barmode='group', title="Channel Spend vs Sales")
+        st.plotly_chart(fig, config={'responsive': True})
+    else:
+        st.info("Upload data to see campaign summary")
 
 def data_table_tab():
     st.header("Data Table & Filters")
