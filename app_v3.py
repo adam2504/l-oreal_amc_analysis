@@ -577,8 +577,16 @@ def preprocess_data(df):
     if 'impressions_cost' in df.columns and 'detail_page_view' in df.columns:
         df['CPDPV'] = df['impressions_cost'] / df['detail_page_view'].replace(0, np.nan)
 
-    if 'purchases' in df.columns and 'impressions_cost' in df.columns:
-        df['CPA'] = df['impressions_cost'] / df['purchases'].replace(0, np.nan)
+    # More flexible CVR calculation - try different click column names
+    cvr_calculated = False
+    for click_col in ['Clicks', 'clicks', 'Click', 'click']:
+        if 'purchases' in df.columns and click_col in df.columns:
+            df['CVR'] = df['purchases'] / df[click_col].replace(0, np.nan)
+            cvr_calculated = True
+            break
+
+    if not cvr_calculated and 'purchases' in df.columns and df.shape[0] > 0:
+        st.warning("⚠️ CVR not calculated: No 'Clicks' column found in data (tried: Clicks, clicks, Click, click)")
 
     return df
 
