@@ -570,23 +570,72 @@ def preprocess_data(df):
             except:
                 pass
 
-    # Calculate additional KPIs
+    # Calculate KPIs according to documentation definitions
+
+    # Awareness KPIs
+    if 'reach' in df.columns:
+        df['REACH'] = df['reach']
+
+    if 'impressions' in df.columns:
+        df['IMPRESSIONS'] = df['impressions']
+        if 'reach' in df.columns:
+            df['AVG FREQ'] = df['impressions'] / df['reach'].replace(0, np.nan)
+
+    # Engagement KPIs
+    if 'clicks' in df.columns:
+        df['CLICKS'] = df['clicks']
+        if 'impressions' in df.columns:
+            df['CTR'] = df['clicks'] / df['impressions'].replace(0, np.nan)
+
+    if 'impressions_cost' in df.columns:
+        df['COST AMC'] = df['impressions_cost']
+        if 'impressions' in df.columns:
+            df['CPM'] = df['impressions_cost'] / (df['impressions'] / 1000).replace(0, np.nan)
+
+    if 'details_page_view_clicks' in df.columns:
+        df['DPV'] = df['details_page_view_clicks']
+        if 'impressions_cost' in df.columns:
+            df['CPDPV'] = df['impressions_cost'] / df['details_page_view_clicks'].replace(0, np.nan)
+
+    if 'add_to_cart' in df.columns:
+        df['ADD TO CART'] = df['add_to_cart']
+
+    # Purchase KPIs
+    if 'purchases' in df.columns:
+        df['PURCHASES'] = df['purchases']
+
+    if 'user_purchased' in df.columns:
+        df['NBR ACHETEURS'] = df['user_purchased']
+
+    if 'product_sales' in df.columns:
+        df['REVENUE'] = df['product_sales']
+
+    if 'purchases' in df.columns and 'details_page_view_clicks' in df.columns:
+        df['CVR'] = df['purchases'] / df['details_page_view_clicks'].replace(0, np.nan)
+
     if 'product_sales' in df.columns and 'impressions_cost' in df.columns:
         df['ROAS'] = df['product_sales'] / df['impressions_cost'].replace(0, np.nan)
 
-    if 'impressions_cost' in df.columns and 'detail_page_view' in df.columns:
-        df['CPDPV'] = df['impressions_cost'] / df['detail_page_view'].replace(0, np.nan)
+    # NTB KPIs
+    if 'ntb_purchases' in df.columns:
+        df['NTB'] = df['ntb_purchases']
 
-    # More flexible CVR calculation - try different click column names
-    cvr_calculated = False
-    for click_col in ['Clicks', 'clicks', 'Click', 'click']:
-        if 'purchases' in df.columns and click_col in df.columns:
-            df['CVR'] = df['purchases'] / df[click_col].replace(0, np.nan)
-            cvr_calculated = True
-            break
+    if 'ntb_product_sales' in df.columns:
+        df['REVENUE NTB'] = df['ntb_product_sales']
 
-    if not cvr_calculated and 'purchases' in df.columns and df.shape[0] > 0:
-        st.warning("⚠️ CVR not calculated: No 'Clicks' column found in data (tried: Clicks, clicks, Click, click)")
+    if 'ntb_purchases' in df.columns and 'impressions_cost' in df.columns:
+        df['COST PER NTB'] = df['impressions_cost'] / df['ntb_purchases'].replace(0, np.nan)
+
+    if 'ntb_purchases' in df.columns and 'details_page_view_clicks' in df.columns:
+        df['CVR NTB'] = df['ntb_purchases'] / df['details_page_view_clicks'].replace(0, np.nan)
+
+    if 'ntb_product_sales' in df.columns and 'impressions_cost' in df.columns:
+        df['ROAS NTB'] = df['ntb_product_sales'] / df['impressions_cost'].replace(0, np.nan)
+
+    if 'ntb_purchases' in df.columns and 'purchases' in df.columns:
+        df['% NTB'] = df['ntb_purchases'] / df['purchases'].replace(0, np.nan)
+
+    # Keep natural column order (KPIs at the end as they are created)
 
     return df
 
