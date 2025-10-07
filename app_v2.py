@@ -80,7 +80,7 @@ def data_upload_tab():
         with col2:
             date_min = df['start_date'].min() if 'start_date' in df.columns and df['start_date'].notna().any() else 'N/A'
             date_max = df['end_date'].max() if 'end_date' in df.columns and df['end_date'].notna().any() else 'N/A'
-            st.metric("Date Range", f"{str(date_min).split('T')[0] if date_min != 'N/A' else 'N/A'} - {str(date_max).split('T')[0] if date_max != 'N/A' else 'N/A'}")
+            st.metric("Date Range", f"{str(date_min).split('T')[0] if date_min != 'N/A' else 'N/A'} to {str(date_max).split('T')[0] if date_max != 'N/A' else 'N/A'}")
 
         # Channels list
         col3 = st.columns(1)[0]
@@ -377,7 +377,7 @@ def data_table_tab():
     st.dataframe(styled_df, column_config=column_config)
 
     # Column selection for export/download
-    st.subheader("� Data Export")
+    st.subheader("🔽 Data Export")
     col1, col2 = st.columns(2)
 
     with col1:
