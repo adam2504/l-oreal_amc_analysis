@@ -9,7 +9,7 @@ import numpy as np
 import time
 
 # Configure page
-st.set_page_config(page_title="AMC Analytics L'Oréal v3", page_icon="📊", layout="wide")
+st.set_page_config(page_title="AMC Analytics L'Oréal v2", page_icon="📊", layout="wide")
 
 # Initialize session state
 if 'data' not in st.session_state:
@@ -26,7 +26,7 @@ DEFAULT_COLORS = [
 ]
 
 def main():
-    st.title("📊 AMC Analytics L'Oréal v3")
+    st.title("📊 AMC Analytics L'Oréal v2")
 
     # Tab layout
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📊 Media Mix", "🔀 Path to Conversion", "📖 Documentation"])
