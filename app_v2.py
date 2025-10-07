@@ -8,6 +8,309 @@ from collections import defaultdict, Counter
 import numpy as np
 import time
 
+# Utility functions
+def extract_path_channels(df):
+    """Extract unique path channels from the data."""
+    path_channels = set()
+    if 'path' in df.columns:
+        for path in df['path'].dropna():
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', path.upper())
+                path_channels.update(matches)
+            except:
+                pass
+    return sorted(list(path_channels))
+
+def get_column_highlights(df):
+    """Get column categories for highlighting."""
+    conversion_columns = [
+        'user_purchased', 'product_sales', 'purchases', 'units_sold',
+        'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
+        'ntb_purchased', 'ntb_product_sales', 'ntb_purchases', 'ntb_units_sold',
+        'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
+    ]
+
+    consideration_columns = [
+        'Clicks', 'user_detail_page_view', 'detail_page_view', 'user_detail_page_view_clicks',
+        'detail_page_view_clicks', 'user_detail_page_view_views', 'detail_page_view_views',
+        'user_add_to_cart', 'add_to_cart', 'user_add_to_cart_clicks', 'add_to_cart_clicks',
+        'user_add_to_cart_views', 'add_to_cart_views', 'user_total_detail_page_view',
+        'total_detail_page_view', 'user_total_detail_page_view_clicks', 'total_detail_page_view_clicks',
+        'user_total_detail_page_view_views', 'total_detail_page_view_views', 'user_total_add_to_cart',
+        'total_add_to_cart', 'user_total_add_to_cart_clicks', 'total_add_to_cart_clicks',
+        'user_total_add_to_cart_views', 'total_add_to_cart_views'
+    ]
+
+    existing_conv_cols = [col for col in conversion_columns if col in df.columns]
+    existing_cons_cols = [col for col in consideration_columns if col in df.columns]
+
+    return existing_conv_cols, existing_cons_cols
+
+def display_quick_stats(df, key_prefix=""):
+    """Display quick statistics section."""
+    if len(df) > 0:
+        st.subheader("Quick Statistics")
+
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+
+        if len(numeric_cols) > 0:
+            selected_metric = st.selectbox(
+                "Select metric for analysis",
+                options=numeric_cols,
+                index=min(10, len(numeric_cols)-1),
+                key=f"{key_prefix}overview_metric"
+            )
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric(f"**Average** {selected_metric}",
+                         f"{df[selected_metric].mean():.2f}")
+            with col2:
+                st.metric(f"**Max** {selected_metric}",
+                         f"{df[selected_metric].max():.2f}")
+            with col3:
+                st.metric(f"**Min** {selected_metric}",
+                         f"{df[selected_metric].min():.2f}")
+
+def display_filters(df, path_channels, analysis_level_filter, key_prefix=""):
+    """Display and return filter controls."""
+    filters = {}
+
+    st.subheader("Filters")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        granularity_options = df['granularity'].dropna().unique()
+        if len(granularity_options) > 0:
+            default_index = list(granularity_options).index("Format") if "Format" in granularity_options else 0
+            filters['granularity'] = st.selectbox(
+                "Granularity",
+                options=granularity_options,
+                index=default_index,
+                key=f"{key_prefix}granularity"
+            )
+        else:
+            filters['granularity'] = None
+
+    with col2:
+        if analysis_level_filter == 'Data Workspace':
+            analysis_level_options = df['analysis_level'].unique()
+            filters['analysis_level'] = st.selectbox(
+                "Analysis Level",
+                options=analysis_level_options,
+                index=0 if len(analysis_level_options) > 0 else 0,
+                key=f"{key_prefix}analysis_level"
+            )
+        else:
+            brand_options = df['brand'].dropna().unique()
+            if len(brand_options) > 0:
+                filters['brand'] = st.selectbox(
+                    "Brand",
+                    options=brand_options,
+                    index=0,
+                    key=f"{key_prefix}brand"
+                )
+            else:
+                filters['brand'] = None
+
+    with col3:
+        filters['channel'] = st.multiselect(
+            "Path Channel",
+            options=path_channels,
+            default=[],
+            key=f"{key_prefix}channel"
+        )
+
+    return filters
+
+def apply_filters(df, filters, analysis_level_filter=None):
+    """Apply filters to dataframe."""
+    filtered_df = df.copy()
+
+    if analysis_level_filter:
+        filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
+    elif 'analysis_level' in filters:
+        if filters['analysis_level']:
+            filtered_df = filtered_df[filtered_df['analysis_level'] == filters['analysis_level']]
+
+    for filter_key in ['granularity', 'brand']:
+        if filter_key in filters and filters[filter_key]:
+            filtered_df = filtered_df[filtered_df[filter_key] == filters[filter_key]]
+
+    if 'channel' in filters and filters['channel']:
+        def contains_selected_channels(path):
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                return all(channel in matches for channel in filters['channel'])
+            except:
+                return False
+        filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
+
+    return filtered_df
+
+def display_sorting_controls(filtered_df, key_prefix=""):
+    """Display sorting and limit controls, return sorted and limited df."""
+    col1, col2 = st.columns(2)
+
+    with col1:
+        sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
+        sort_by = st.selectbox("Sort by column (descending)", options=sort_options, key=f"{key_prefix}sort_by")
+
+    with col2:
+        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key=f"{key_prefix}max_rows")
+
+    st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
+
+    # Apply sorting if requested
+    if sort_by != 'None':
+        ascending = False  # Always descending
+        filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
+    else:
+        filtered_df_sorted = filtered_df
+
+    # Limit to max_rows for display
+    display_df = filtered_df_sorted.head(max_rows)
+
+    return display_df
+
+def display_styled_table(df, key_prefix=""):
+    """Display the dataframe with column highlighting."""
+    existing_conv_cols, existing_cons_cols = get_column_highlights(df)
+
+    def get_colors(column):
+        if column.name in existing_conv_cols:
+            return ['background-color: #FFA500'] * len(column)  # Orange
+        elif column.name in existing_cons_cols:
+            return ['background-color: #C896C8'] * len(column)  # Light purple
+        else:
+            return [''] * len(column)  # No highlight
+
+    styled_df = df.style.apply(get_colors, axis=0)
+    column_config = {
+        col: st.column_config.Column(width=110) for col in df.columns
+    }
+    st.dataframe(styled_df, column_config=column_config, hide_index=True)
+
+def display_export_controls(df, key_prefix="", default_all=True):
+    """Display export controls for data."""
+    st.subheader("🔽 Data Export")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        selected_columns = st.multiselect(
+            "Select columns to export",
+            options=list(df.columns),
+            default=list(df.columns) if default_all else list(df.columns[:11]),
+            key=f"export_column_selection_{key_prefix}"
+        )
+
+    with col2:
+        export_format = st.selectbox(
+            "Export format",
+            options=["CSV", "Excel"],
+            index=0,
+            key=f"export_format_{key_prefix}"
+        )
+
+    # Create export data with selected columns
+    export_df = df[selected_columns] if selected_columns else pd.DataFrame()
+
+    if not export_df.empty:
+        if export_format == "CSV":
+            csv_data = export_df.to_csv(index=False)
+            st.download_button(
+                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=csv_data,
+                file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key=f"download_csv_button_{key_prefix}"
+            )
+        else:  # Excel
+            import io
+            buffer = io.BytesIO()
+            export_df.to_excel(buffer, index=False, engine='openpyxl')
+            excel_data = buffer.getvalue()
+
+            st.download_button(
+                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
+                data=excel_data,
+                file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"download_excel_button_{key_prefix}"
+            )
+
+def display_search_controls(filtered_df_sorted, key_prefix=""):
+    """Display search controls and apply search if provided."""
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        search_term = st.text_input(
+            "🔍 Search in data",
+            placeholder="Type to filter rows...",
+            key=f"{key_prefix}search",
+            help="Search across all text columns in the table"
+        )
+    with col2:
+        search_button = st.button("Search", key=f"{key_prefix}search_button", help="Apply search filter")
+
+    # Apply search filter
+    if search_term and len(search_term.strip()) > 0:
+        search_filtered_df = filtered_df_sorted.copy()
+        text_columns = search_filtered_df.select_dtypes(include=['object', 'string']).columns
+        mask = pd.Series(False, index=search_filtered_df.index)
+        for col in text_columns:
+            mask |= search_filtered_df[col].astype(str).str.contains(search_term, case=False, na=False)
+        search_filtered_df = search_filtered_df[mask]
+
+        filtered_df_sorted = search_filtered_df
+        st.info(f"🔍 Found {len(filtered_df_sorted)} rows matching '{search_term}'")
+
+    return filtered_df_sorted
+
+def display_channel_color_pickers(key_prefix=""):
+    """Display channel color picker controls."""
+    st.subheader("Channel Colors")
+    num_channels = len(st.session_state.channel_colors)
+
+    if num_channels > 0:
+        # Create appropriate number of columns based on number of channels
+        num_cols = max(1, min(4, num_channels))
+        color_cols = st.columns(num_cols)
+
+        for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
+            col_idx = i % num_cols
+            with color_cols[col_idx]:
+                new_color = st.color_picker(f"{channel}", color, key=f"{key_prefix}color_{channel}")
+                if new_color != color:
+                    st.session_state.channel_colors[channel] = new_color
+    else:
+        st.info("💡 Upload data to see channel color options")
+
+def apply_video_filter(df, has_video):
+    """Apply video column filtering if needed."""
+    df_filtered = df
+    if not has_video:
+        video_cols = [col for col in df.columns if 'video' in col.lower()]
+        if video_cols:
+            df_filtered = df.drop(columns=video_cols)
+
+        if 'description' in df_filtered.columns and 'reach' in df_filtered.columns:
+            cols_to_keep = []
+            keep_mode = True
+
+            for col in df_filtered.columns:
+                if col == 'description':
+                    cols_to_keep.append(col)
+                    keep_mode = False
+                elif col == 'reach':
+                    keep_mode = True
+                    cols_to_keep.append(col)
+                elif keep_mode:
+                    cols_to_keep.append(col)
+
+            df_filtered = df_filtered[cols_to_keep]
+
+    return df_filtered
+
 # Configure page
 st.set_page_config(page_title="AMC Analytics L'Oréal v2", page_icon="📊", layout="wide")
 
@@ -115,6 +418,26 @@ def data_upload_tab():
                 except Exception as e:
                     st.error(f"❌ Error processing data: {str(e)}")
                     return
+
+            # Extract channels from data for color initialization
+            channels = []
+            if 'channel' in df.columns:
+                channels.extend(df['channel'].dropna().unique())
+            if 'path' in df.columns:
+                for path in df['path'].dropna():
+                    try:
+                        # Extract channels from path like "[1/SEARCH, 2/DSP]"
+                        matches = re.findall(r'/(\w+(?:\s+\w+)*)', str(path))
+                        channels.extend(matches)
+                    except:
+                        pass
+
+            channels = list(set(channels))
+
+            # Initialize colors if not already done
+            for i, channel in enumerate(channels):
+                if channel not in st.session_state.channel_colors:
+                    st.session_state.channel_colors[channel] = DEFAULT_COLORS[i % len(DEFAULT_COLORS)]
 
         except Exception as e:
             st.error(f"❌ Unexpected error during file upload: {str(e)}")
@@ -254,28 +577,16 @@ def preprocess_data(df):
     if 'impressions_cost' in df.columns and 'detail_page_view' in df.columns:
         df['CPDPV'] = df['impressions_cost'] / df['detail_page_view'].replace(0, np.nan)
 
-    if 'purchases' in df.columns and 'impressions_cost' in df.columns:
-        df['CPA'] = df['impressions_cost'] / df['purchases'].replace(0, np.nan)
+    # More flexible CVR calculation - try different click column names
+    cvr_calculated = False
+    for click_col in ['Clicks', 'clicks', 'Click', 'click']:
+        if 'purchases' in df.columns and click_col in df.columns:
+            df['CVR'] = df['purchases'] / df[click_col].replace(0, np.nan)
+            cvr_calculated = True
+            break
 
-    # Extract channels from data for color initialization
-    channels = []
-    if 'channel' in df.columns:
-        channels.extend(df['channel'].dropna().unique())
-    if 'path' in df.columns:
-        for path in df['path'].dropna():
-            try:
-                # Extract channels from path like "[1/SEARCH, 2/DSP]"
-                matches = re.findall(r'/(\w+(?:\s+\w+)*)', str(path))
-                channels.extend(matches)
-            except:
-                pass
-
-    channels = list(set(channels))
-
-    # Initialize colors if not already done
-    for i, channel in enumerate(channels):
-        if channel not in st.session_state.channel_colors:
-            st.session_state.channel_colors[channel] = DEFAULT_COLORS[i % len(DEFAULT_COLORS)]
+    if not cvr_calculated and 'purchases' in df.columns and df.shape[0] > 0:
+        st.warning("⚠️ CVR not calculated: No 'Clicks' column found in data (tried: Clicks, clicks, Click, click)")
 
     return df
 
@@ -284,43 +595,13 @@ def data_table_tab():
 
     df = st.session_state.data.copy()
 
-    # Statistics (moved up to match other tabs)
-    if len(df) > 0:
-        st.subheader("Quick Statistics")
-
-        numeric_cols = df.select_dtypes(include=[np.number]).columns
-
-        if len(numeric_cols) > 0:
-            selected_metric = st.selectbox(
-                "Select metric for analysis",
-                options=numeric_cols,
-                index=min(10, len(numeric_cols)-1),  # Default to a metric column
-                key="data_workspace_overview_metric"
-            )
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(f"**Average** {selected_metric}",
-                         f"{df[selected_metric].mean():.2f}")
-            with col2:
-                st.metric(f"**Max** {selected_metric}",
-                         f"{df[selected_metric].max():.2f}")
-            with col3:
-                st.metric(f"**Min** {selected_metric}",
-                         f"{df[selected_metric].min():.2f}")
+    # Show quick stats for all data
+    display_quick_stats(df, "data_workspace")
 
     # Extract path channels for filter
-    path_channels = set()
-    if 'path' in df.columns:
-        for path in df['path'].dropna():
-            try:
-                matches = re.findall(r'/([A-Z\s]+)', path.upper())
-                path_channels.update(matches)
-            except:
-                pass
-    path_channels = sorted(list(path_channels))
+    path_channels = extract_path_channels(df)
 
-    # Filters
+    # Filters - Data Workspace has analysis_level instead of fixed level
     st.subheader("Filters")
     col1, col2, col3 = st.columns(3)
 
@@ -343,180 +624,49 @@ def data_table_tab():
         )
 
     with col3:
-        channel_filter = st.multiselect(
-            "Path Channel",
-            options=path_channels,
-            default=[],
-            key="data_workspace_channel"  # Start with no channels selected
-        )
+        brand_options = df['brand'].dropna().unique()
+        if len(brand_options) > 0:
+            brand_filter = st.selectbox(
+                "Brand",
+                options=brand_options,
+                index=0,
+                key="data_workspace_brand"
+            )
+        else:
+            brand_filter = None
+
+    # Channel filter
+    channel_filter = st.multiselect(
+        "Path Channel",
+        options=path_channels,
+        default=[],
+        key="data_workspace_channel"
+    )
 
     # Apply filters
-    filtered_df = df.copy()
-    if analysis_level_filter:
-        filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
-    if granularity_filter:
-        filtered_df = filtered_df[filtered_df['granularity'] == granularity_filter]
-    if channel_filter:
-        def contains_selected_channels(path):
-            try:
-                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
-                return all(channel in matches for channel in channel_filter)
-            except:
-                return False
-        filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
-
-    # Add sorting options
-    col1, col2 = st.columns(2)
-
-    with col1:
-        sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
-        sort_by = st.selectbox("Sort by column (descending)", options=sort_options, key="data_workspace_sort_by")
-
-    with col2:
-        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="data_workspace_max_rows")
-
-    st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
-
-    # Apply sorting if requested
-    if sort_by != 'None':
-        ascending = False  # Always descending for data workspace
-        filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
-    else:
-        filtered_df_sorted = filtered_df
-
-    # Add search functionality
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        search_term = st.text_input(
-            "🔍 Search in data",
-            placeholder="Type to filter rows...",
-            key="data_workspace_search",
-            help="Search across all text columns in the table"
-        )
-    with col2:
-        search_button = st.button("Search", key="data_workspace_search_button", help="Apply search filter")
-
-    # Apply search filter
-    if search_term and len(search_term.strip()) > 0:
-        search_filtered_df = filtered_df_sorted.copy()
-        # Search across all string/text columns
-        text_columns = search_filtered_df.select_dtypes(include=['object', 'string']).columns
-        mask = pd.Series(False, index=search_filtered_df.index)
-        for col in text_columns:
-            mask |= search_filtered_df[col].astype(str).str.contains(search_term, case=False, na=False)
-        search_filtered_df = search_filtered_df[mask]
-
-        filtered_df_sorted = search_filtered_df
-        st.info(f"🔍 Found {len(filtered_df_sorted)} rows matching '{search_term}'")
-
-    # Limit to max_rows for display
-    display_df = filtered_df_sorted.head(max_rows)
-
-    # Display the table
-    # Highlight columns logic
-    conversion_columns = [
-        'user_purchased', 'product_sales', 'purchases', 'units_sold',
-        'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
-        'ntb_purchased', 'ntb_product_sales', 'ntb_purchases', 'ntb_units_sold',
-        'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
-    ]
-
-    consideration_columns = [
-        'Clicks', 'user_detail_page_view', 'detail_page_view', 'user_detail_page_view_clicks',
-        'detail_page_view_clicks', 'user_detail_page_view_views', 'detail_page_view_views',
-        'user_add_to_cart', 'add_to_cart', 'user_add_to_cart_clicks', 'add_to_cart_clicks',
-        'user_add_to_cart_views', 'add_to_cart_views', 'user_total_detail_page_view',
-        'total_detail_page_view', 'user_total_detail_page_view_clicks', 'total_detail_page_view_clicks',
-        'user_total_detail_page_view_views', 'total_detail_page_view_views', 'user_total_add_to_cart',
-        'total_add_to_cart', 'user_total_add_to_cart_clicks', 'total_add_to_cart_clicks',
-        'user_total_add_to_cart_views', 'total_add_to_cart_views'
-    ]
-
-    # Check which KPI columns exist
-    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
-    existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
-
-    # Display table with styling
-    # Define color function based on column category
-    def get_colors(column):
-        if column.name in existing_conv_cols:
-            return ['background-color: #FFA500'] * len(column)  # Orange
-        elif column.name in existing_cons_cols:
-            return ['background-color: #C896C8'] * len(column)  # Light purple
-        else:
-            return [''] * len(column)  # No highlight
-
-    # Apply pandas styling to highlight columns
-    styled_df = display_df.style.apply(get_colors, axis=0)
-    # Column configuration for constrained width (max ~20 characters)
-    column_config = {
-        col: st.column_config.Column(width=110) for col in display_df.columns
+    filters = {
+        'analysis_level': analysis_level_filter,
+        'granularity': granularity_filter,
+        'brand': brand_filter,
+        'channel': channel_filter
     }
-    st.dataframe(styled_df, column_config=column_config)
+    filtered_df = apply_filters(df, filters)
 
-    # Column selection for export/download
-    st.subheader("🔽 Data Export")
-    col1, col2 = st.columns(2)
+    # Sorting and display controls
+    display_df = display_sorting_controls(filtered_df, "data_workspace")
 
-    with col1:
-        selected_columns = st.multiselect(
-            "Select columns to export",
-            options=list(filtered_df.columns),
-            default=list(filtered_df.columns),  # All columns selected by default
-            key="export_column_selection"
-        )
+    # Add search functionality (unique to data workspace)
+    filtered_df_search = display_search_controls(display_df, "data_workspace")
+    display_df = filtered_df_search.head(len(display_df))  # Maintain max_rows limit
 
-    with col2:
-        export_format = st.selectbox(
-            "Export format",
-            options=["CSV", "Excel"],
-            index=0,
-            key="export_format"
-        )
+    # Display table
+    display_styled_table(display_df, "data_workspace")
 
-    # Create export data with selected columns
-    export_df = filtered_df[selected_columns] if selected_columns else pd.DataFrame()
+    # Export controls with all columns by default
+    display_export_controls(filtered_df, "data_workspace", default_all=True)
 
-    if not export_df.empty:
-        if export_format == "CSV":
-            csv_data = export_df.to_csv(index=False)
-            st.download_button(
-                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=csv_data,
-                file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                key="download_csv_button"
-            )
-        else:  # Excel
-            # Convert to Excel format using openpyxl
-            import io
-            buffer = io.BytesIO()
-            export_df.to_excel(buffer, index=False, engine='openpyxl')
-            excel_data = buffer.getvalue()
-
-            st.download_button(
-                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=excel_data,
-                file_name=f"amc_data_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel_button"
-            )
-
-    # Color picker for channels (moved to end)
-    st.subheader("Channel Colors")
-    num_channels = len(st.session_state.channel_colors)
-
-    if num_channels > 0:
-        color_cols = st.columns(max(1, min(4, num_channels)))
-    else:
-        st.info("💡 Upload data to see channel color options")
-        color_cols = None
-
-    for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
-        with color_cols[i % 4]:
-            new_color = st.color_picker(f"{channel}", color, key=f"data_workspace_color_{channel}")
-            if new_color != color:
-                st.session_state.channel_colors[channel] = new_color
+    # Channel color pickers
+    display_channel_color_pickers("data_workspace")
 
 
 def media_mix_tab():
@@ -524,265 +674,54 @@ def media_mix_tab():
 
     df = st.session_state.data.copy()
 
-    # Extract path channels for filter
-    path_channels = set()
-    if 'path' in df.columns:
-        for path in df['path'].dropna():
-            try:
-                matches = re.findall(r'/([A-Z\s]+)', path.upper())
-                path_channels.update(matches)
-            except:
-                pass
-    path_channels = sorted(list(path_channels))
+    # Extract path channels
+    path_channels = extract_path_channels(df)
 
     # Fixed analysis level
     analysis_level_filter = 'Media Mix'
 
-    # Statistics (moved up)
-    if len(df[df['analysis_level'] == analysis_level_filter]) > 0:
-        filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
-        st.subheader("Quick Statistics")
+    # Show quick stats for filtered data
+    filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
+    display_quick_stats(filtered_df_for_stats, "media_mix")
 
-        numeric_cols = filtered_df_for_stats.select_dtypes(include=[np.number]).columns
-
-        if len(numeric_cols) > 0:
-            selected_metric = st.selectbox(
-                "Select metric for analysis",
-                options=numeric_cols,
-                index=min(10, len(numeric_cols)-1),  # Default to a metric column
-                key="media_mix_overview_metric"
-            )
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(f"**Average** {selected_metric}",
-                         f"{filtered_df_for_stats[selected_metric].mean():.2f}")
-            with col2:
-                st.metric(f"**Max** {selected_metric}",
-                         f"{filtered_df_for_stats[selected_metric].max():.2f}")
-            with col3:
-                st.metric(f"**Min** {selected_metric}",
-                         f"{filtered_df_for_stats[selected_metric].min():.2f}")
-
-    # Filters
-    st.subheader("Filters")
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        granularity_options = df['granularity'].dropna().unique()
-        if len(granularity_options) > 0:
-            # Default to "format" if available, otherwise first option
-            if "Format" in granularity_options:
-                default_index = list(granularity_options).index("Format")
-            else:
-                default_index = 0
-            granularity_filter = st.selectbox(
-                "Granularity",
-                options=granularity_options,
-                index=default_index,
-                key="media_mix_granularity"
-            )
-        else:
-            granularity_filter = None
-
-    with col2:
-        brand_options = df['brand'].dropna().unique()
-        if len(brand_options) > 0:
-            brand_filter = st.selectbox(
-                "Brand",
-                options=brand_options,
-                index=0,
-                key="media_mix_brand"
-            )
-        else:
-            brand_filter = None
-
-    with col3:
-        channel_filter = st.multiselect(
-            "Path Channel",
-            options=path_channels,
-            default=[],
-            key="media_mix_channel"  # Start with no channels selected
-        )
+    # Get filters
+    filters = display_filters(df, path_channels, analysis_level_filter, "media_mix")
 
     # Apply filters
-    filtered_df = df.copy()
-    if analysis_level_filter:
-        filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
-    if granularity_filter:
-        filtered_df = filtered_df[filtered_df['granularity'] == granularity_filter]
-    if brand_filter:
-        filtered_df = filtered_df[filtered_df['brand'] == brand_filter]
-    if channel_filter:
-        def contains_selected_channels(path):
-            try:
-                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
-                return all(channel in matches for channel in channel_filter)
-            except:
-                return False
-        filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
+    filtered_df = apply_filters(df, filters, analysis_level_filter)
 
-    # Add sorting options and max rows
-    col1, col2 = st.columns(2)
+    # Sorting and display controls
+    display_df = display_sorting_controls(filtered_df, "media_mix")
 
-    with col1:
-        sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
-        sort_by = st.selectbox("Sort by column (descending)", options=sort_options, key="media_mix_sort_by")
+    # Display table
+    display_styled_table(display_df, "media_mix")
 
-    with col2:
-        if sort_by != 'None':
-            # Always sort in descending order when a column is selected
-            sort_order = "Descending"
-        else:
-            sort_order = "Descending"  # default
+    # Export controls
+    display_export_controls(display_df, "media_mix", default_all=False)
 
-        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="media_mix_max_rows")
-
-
-
-    st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
-
-    # Apply sorting if requested
-    if sort_by != 'None':
-        ascending = (sort_order == "Ascending")
-        filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
-    else:
-        filtered_df_sorted = filtered_df
-
-    # Limit to max_rows for display and plots
-    display_df = filtered_df_sorted.head(max_rows)
-
-    # Display the table first (always, whether plots are generated or not)
-    # Highlight columns logic
-    conversion_columns = [
-        'user_purchased', 'product_sales', 'purchases', 'units_sold',
-        'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
-        'ntb_purchased', 'ntb_product_sales', 'ntb_purchases', 'ntb_units_sold',
-        'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
-    ]
-
-    consideration_columns = [
-        'Clicks', 'user_detail_page_view', 'detail_page_view', 'user_detail_page_view_clicks',
-        'detail_page_view_clicks', 'user_detail_page_view_views', 'detail_page_view_views',
-        'user_add_to_cart', 'add_to_cart', 'user_add_to_cart_clicks', 'add_to_cart_clicks',
-        'user_add_to_cart_views', 'add_to_cart_views', 'user_total_detail_page_view',
-        'total_detail_page_view', 'user_total_detail_page_view_clicks', 'total_detail_page_view_clicks',
-        'user_total_detail_page_view_views', 'total_detail_page_view_views', 'user_total_add_to_cart',
-        'total_add_to_cart', 'user_total_add_to_cart_clicks', 'total_add_to_cart_clicks',
-        'user_total_add_to_cart_views', 'total_add_to_cart_views'
-    ]
-
-    # Check which KPI columns exist
-    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
-    existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
-
-    # Display table with styling
-    # Define color function based on column category
-    def get_colors(column):
-        if column.name in existing_conv_cols:
-            return ['background-color: #FFA500'] * len(column)  # Orange
-        elif column.name in existing_cons_cols:
-            return ['background-color: #C896C8'] * len(column)  # Light purple
-        else:
-            return [''] * len(column)  # No highlight
-
-    # Apply pandas styling to highlight columns
-    styled_df = display_df.style.apply(get_colors, axis=0)
-    # Column configuration for constrained width (max ~20 characters)
-    column_config = {
-        col: st.column_config.Column(width=110) for col in display_df.columns
-    }
-    st.dataframe(styled_df, column_config=column_config)
-
-    # Column selection for export/download
-    st.subheader("🔽 Data Export")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        selected_columns = st.multiselect(
-            "Select columns to export",
-            options=list(display_df.columns),
-            default=list(display_df.columns[:11]),  # All columns selected by default
-            key="export_column_selection_media_mix"
-        )
-
-    with col2:
-        export_format = st.selectbox(
-            "Export format",
-            options=["CSV", "Excel"],
-            index=0,
-            key="export_format_media_mix"
-        )
-
-    # Create export data with selected columns
-    export_df = display_df[selected_columns] if selected_columns else pd.DataFrame()
-
-    if not export_df.empty:
-        if export_format == "CSV":
-            csv_data = export_df.to_csv(index=False)
-            st.download_button(
-                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=csv_data,
-                file_name=f"amc_media_mix_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                key="download_csv_button_media_mix"
-            )
-        else:  # Excel
-            # Convert to Excel format using openpyxl
-            import io
-            buffer = io.BytesIO()
-            export_df.to_excel(buffer, index=False, engine='openpyxl')
-            excel_data = buffer.getvalue()
-
-            st.download_button(
-                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=excel_data,
-                file_name=f"amc_media_mix_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel_button_media_mix"
-            )
-
+    # Generate plots button
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
 
-    # Color picker for channels
-    st.subheader("Channel Colors")
-    num_channels = len(st.session_state.channel_colors)
+    # Channel color pickers
+    display_channel_color_pickers("media_mix")
 
-    if num_channels > 0:
-        color_cols = st.columns(max(1, min(4, num_channels)))
-
-        for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
-            with color_cols[i % 4]:
-                new_color = st.color_picker(f"{channel}", color, key=f"media_mix_color_{channel}")
-                if new_color != color:
-                    st.session_state.channel_colors[channel] = new_color
-    else:
-        st.info("💡 Upload data to see channel color options")
-
-    # Display plots separately if generated
+    # Display plots if generated
     if generate_plots:
         st.subheader("📊 Charts for Each Row")
         st.info(f"Displaying charts for the {len(display_df)} rows shown above")
 
-        # Create and display plots for each row
         for idx, row in display_df.iterrows():
-            # Get the path from the row
             path_value = str(row.get('path', f'Row {idx}'))
             path_clean = path_value.replace('[', '').replace(']', '').strip()
 
             with st.expander(f"📈 Chart for Path: {path_clean}", expanded=False):
-                # Create diagrams based on analysis level
-                if analysis_level_filter == 'Media Mix':
-                    # Extract channels from path
-                    try:
-                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
-                        unique_channels = list(dict.fromkeys(matches))  # Remove duplicates while preserving order
-
-                        fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
-                    except Exception as e:
-                        # Fallback in case of error - show exact error
-                        fig = go.Figure(data=[go.Bar(x=['DEBUG ERROR'], y=[1])])
-                        fig.update_layout(title=f"Error: {str(e)[:100]}", height=300)
+                try:
+                    matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
+                    unique_channels = list(dict.fromkeys(matches))
+                    fig = create_venn_diagram(unique_channels, st.session_state.channel_colors)
+                except Exception as e:
+                    fig = go.Figure(data=[go.Bar(x=['DEBUG ERROR'], y=[1])])
+                    fig.update_layout(title=f"Error: {str(e)[:100]}", height=300)
 
                 st.plotly_chart(fig, config={'responsive': True}, key=f"media_mix_chart_{idx}")
 
@@ -792,265 +731,57 @@ def path_to_conversion_tab():
 
     df = st.session_state.data.copy()
 
-    # Extract path channels for filter
-    path_channels = set()
-    if 'path' in df.columns:
-        for path in df['path'].dropna():
-            try:
-                matches = re.findall(r'/([A-Z\s]+)', path.upper())
-                path_channels.update(matches)
-            except:
-                pass
-    path_channels = sorted(list(path_channels))
+    # Extract path channels
+    path_channels = extract_path_channels(df)
 
     # Fixed analysis level
     analysis_level_filter = 'Path to conversion'
 
-    # Statistics (moved up)
-    if len(df[df['analysis_level'] == analysis_level_filter]) > 0:
-        filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
-        st.subheader("Quick Statistics")
+    # Show quick stats for filtered data
+    filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
+    display_quick_stats(filtered_df_for_stats, "path_to_conversion")
 
-        numeric_cols = filtered_df_for_stats.select_dtypes(include=[np.number]).columns
-
-        if len(numeric_cols) > 0:
-            selected_metric = st.selectbox(
-                "Select metric for analysis",
-                options=numeric_cols,
-                index=min(10, len(numeric_cols)-1),  # Default to a metric column
-                key="path_to_conversion_overview_metric"
-            )
-
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric(f"**Average** {selected_metric}",
-                         f"{filtered_df_for_stats[selected_metric].mean():.2f}")
-            with col2:
-                st.metric(f"**Max** {selected_metric}",
-                         f"{filtered_df_for_stats[selected_metric].max():.2f}")
-            with col3:
-                st.metric(f"**Min** {selected_metric}",
-                         f"{filtered_df_for_stats[selected_metric].min():.2f}")
-
-    # Filters
-    st.subheader("Filters")
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        granularity_options = df['granularity'].dropna().unique()
-        if len(granularity_options) > 0:
-            # Default to "format" if available, otherwise first option
-            if "Format" in granularity_options:
-                default_index = list(granularity_options).index("Format")
-            else:
-                default_index = 0
-            granularity_filter = st.selectbox(
-                "Granularity",
-                options=granularity_options,
-                index=default_index,
-                key="path_to_conversion_granularity"
-            )
-        else:
-            granularity_filter = None
-
-    with col2:
-        brand_options = df['brand'].dropna().unique()
-        if len(brand_options) > 0:
-            brand_filter = st.selectbox(
-                "Brand",
-                options=brand_options,
-                index=0,
-                key="path_to_conversion_brand"
-            )
-        else:
-            brand_filter = None
-
-    with col3:
-        channel_filter = st.multiselect(
-            "Path Channel",
-            options=path_channels,
-            default=[],
-            key="path_to_conversion_channel"  # Start with no channels selected
-        )
+    # Get filters
+    filters = display_filters(df, path_channels, analysis_level_filter, "path_to_conversion")
 
     # Apply filters
-    filtered_df = df.copy()
-    if analysis_level_filter:
-        filtered_df = filtered_df[filtered_df['analysis_level'] == analysis_level_filter]
-    if granularity_filter:
-        filtered_df = filtered_df[filtered_df['granularity'] == granularity_filter]
-    if brand_filter:
-        filtered_df = filtered_df[filtered_df['brand'] == brand_filter]
-    if channel_filter:
-        def contains_selected_channels(path):
-            try:
-                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
-                return all(channel in matches for channel in channel_filter)
-            except:
-                return False
-        filtered_df = filtered_df[filtered_df['path'].apply(contains_selected_channels)]
+    filtered_df = apply_filters(df, filters, analysis_level_filter)
 
-    # Add sorting options and max rows
-    col1, col2 = st.columns(2)
+    # Sorting and display controls
+    display_df = display_sorting_controls(filtered_df, "path_to_conversion")
 
-    with col1:
-        sort_options = ['None'] + list(filtered_df.select_dtypes(include=[np.number]).columns)
-        sort_by = st.selectbox("Sort by column (descending)", options=sort_options, key="path_to_conversion_sort_by")
+    # Display table
+    display_styled_table(display_df, "path_to_conversion")
 
-    with col2:
-        if sort_by != 'None':
-            # Always sort in descending order when a column is selected
-            sort_order = "Descending"
-        else:
-            sort_order = "Descending"  # default
+    # Export controls
+    display_export_controls(display_df, "path_to_conversion", default_all=False)
 
-        max_rows = st.slider("Maximum rows to display", min_value=5, max_value=max(10, len(filtered_df)), value=min(50, len(filtered_df)), step=5, key="path_to_conversion_max_rows")
-
-    st.subheader(f"Filtered Data ({len(filtered_df)} rows)")
-
-    # Apply sorting if requested
-    if sort_by != 'None':
-        ascending = (sort_order == "Ascending")
-        filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
-    else:
-        filtered_df_sorted = filtered_df
-
-    # Limit to max_rows for display and plots
-    display_df = filtered_df_sorted.head(max_rows)
-
-    # Display the table first (always, whether plots are generated or not)
-    # Highlight columns logic
-    conversion_columns = [
-        'user_purchased', 'product_sales', 'purchases', 'units_sold',
-        'user_total_purchased', 'total_purchases', 'total_product_sales', 'total_units_sold',
-        'ntb_purchased', 'ntb_product_sales', 'ntb_purchases', 'ntb_units_sold',
-        'ntb_total_purchased', 'total_ntb_purchases', 'total_ntb_product_sales', 'total_ntb_units_sold'
-    ]
-
-    consideration_columns = [
-        'Clicks', 'user_detail_page_view', 'detail_page_view', 'user_detail_page_view_clicks',
-        'detail_page_view_clicks', 'user_detail_page_view_views', 'detail_page_view_views',
-        'user_add_to_cart', 'add_to_cart', 'user_add_to_cart_clicks', 'add_to_cart_clicks',
-        'user_add_to_cart_views', 'add_to_cart_views', 'user_total_detail_page_view',
-        'total_detail_page_view', 'user_total_detail_page_view_clicks', 'total_detail_page_view_clicks',
-        'user_total_detail_page_view_views', 'total_detail_page_view_views', 'user_total_add_to_cart',
-        'total_add_to_cart', 'user_total_add_to_cart_clicks', 'total_add_to_cart_clicks',
-        'user_total_add_to_cart_views', 'total_add_to_cart_views'
-    ]
-
-    # Check which KPI columns exist
-    existing_conv_cols = [col for col in conversion_columns if col in filtered_df.columns]
-    existing_cons_cols = [col for col in consideration_columns if col in filtered_df.columns]
-
-    # Display table with styling
-    # Define color function based on column category
-    def get_colors(column):
-        if column.name in existing_conv_cols:
-            return ['background-color: #FFA500'] * len(column)  # Orange
-        elif column.name in existing_cons_cols:
-            return ['background-color: #C896C8'] * len(column)  # Light purple
-        else:
-            return [''] * len(column)  # No highlight
-
-    # Apply pandas styling to highlight columns
-    styled_df = display_df.style.apply(get_colors, axis=0)
-    # Column configuration for constrained width (max ~20 characters)
-    column_config = {
-        col: st.column_config.Column(width=110) for col in display_df.columns
-    }
-    st.dataframe(styled_df, column_config=column_config)
-
-    # Column selection for export/download
-    st.subheader("🔽 Data Export")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        selected_columns = st.multiselect(
-            "Select columns to export",
-            options=list(display_df.columns),
-            default=list(display_df.columns[:11]),  # All columns selected by default
-            key="export_column_selection_path_to_conversion"
-        )
-
-    with col2:
-        export_format = st.selectbox(
-            "Export format",
-            options=["CSV", "Excel"],
-            index=0,
-            key="export_format_path_to_conversion"
-        )
-
-    # Create export data with selected columns
-    export_df = display_df[selected_columns] if selected_columns else pd.DataFrame()
-
-    if not export_df.empty:
-        if export_format == "CSV":
-            csv_data = export_df.to_csv(index=False)
-            st.download_button(
-                label=f"📥 Download CSV ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=csv_data,
-                file_name=f"amc_path_to_conversion_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                key="download_csv_button_path_to_conversion"
-            )
-        else:  # Excel
-            # Convert to Excel format using openpyxl
-            import io
-            buffer = io.BytesIO()
-            export_df.to_excel(buffer, index=False, engine='openpyxl')
-            excel_data = buffer.getvalue()
-
-            st.download_button(
-                label=f"📥 Download Excel ({len(export_df)} rows × {len(selected_columns)} columns)",
-                data=excel_data,
-                file_name=f"amc_path_to_conversion_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_excel_button_path_to_conversion"
-            )
-
+    # Generate plots button
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_path_to_conversion")
 
-    # Color picker for channels
-    st.subheader("Channel Colors")
-    num_channels = len(st.session_state.channel_colors)
+    # Channel color pickers
+    display_channel_color_pickers("path_to_conversion")
 
-    if num_channels > 0:
-        color_cols = st.columns(max(1, min(4, num_channels)))
-
-        for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
-            with color_cols[i % 4]:
-                new_color = st.color_picker(f"{channel}", color, key=f"path_to_conversion_color_{channel}")
-                if new_color != color:
-                    st.session_state.channel_colors[channel] = new_color
-    else:
-        st.info("💡 Upload data to see channel color options")
-
-    # Display plots separately if generated
+    # Display plots if generated
     if generate_plots:
         st.subheader("📊 Charts for Each Row")
         st.info(f"Displaying charts for the {len(display_df)} rows shown above")
 
-        # Create and display plots for each row
         for idx, row in display_df.iterrows():
-            # Get the path from the row
             path_value = str(row.get('path', f'Row {idx}'))
             path_clean = path_value.replace('[', '').replace(']', '').strip()
 
             with st.expander(f"📈 Chart for Path: {path_clean}", expanded=False):
-                # Create diagrams based on analysis level
-                if analysis_level_filter == 'Path to conversion':
-                    # Extract steps from conversion path
-                    try:
-                        matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
-                        if matches:
-                            fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
-                        else:
-                            fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
-                            fig.update_layout(title="No conversion path found", height=300)
-                    except:
-                        # Fallback in case of error
-                        fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                        fig.update_layout(title="Error creating chevron diagram", height=300)
+                try:
+                    matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
+                    if matches:
+                        fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
+                    else:
+                        fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
+                        fig.update_layout(title="No conversion path found", height=300)
+                except:
+                    fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
+                    fig.update_layout(title="Error creating chevron diagram", height=300)
 
                 st.plotly_chart(fig, config={'responsive': True}, key=f"path_to_conversion_chart_{idx}")
 
