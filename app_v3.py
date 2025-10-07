@@ -607,46 +607,35 @@ def campaign_summary_tab():
 
     df = st.session_state.data
 
-    # Overall metrics
-    col1, col2, col3, col4 = st.columns(4)
+    # Create 3 visual blocks for total metrics
+    col1, col2, col3 = st.columns(3)
 
-    total_spend = df['impressions_cost'].sum()
-    total_purchases = df['purchases'].sum()
-    total_sales = df['product_sales'].sum()
-
+    # Total Cost
+    total_cost = df['impressions_cost'].sum()
     with col1:
-        st.metric("Total Spend", f"{total_spend:,.0f} €")
+        st.metric(
+            label="**Total Cost**",
+            value=f"{total_cost:,.0f} €",
+            delta=None
+        )
+
+    # Total Impressions
+    total_impressions = df['impressions'].sum()
     with col2:
-        st.metric("Total Purchases", f"{total_purchases:,.0f}")
+        st.metric(
+            label="**Total Impressions**",
+            value=f"{total_impressions:,.0f}",
+            delta=None
+        )
+
+    # Total Conversions
+    total_conversions = df['purchases'].sum()
     with col3:
-        st.metric("Total Sales", f"{total_sales:,.0f} €")
-    with col4:
-        roas = total_sales / total_spend if total_spend > 0 else 0
-        st.metric("Overall ROAS", f"{roas:.2f}")
-
-    # Channel performance
-    st.subheader("Channel Performance")
-    if 'channel' in df.columns:
-        channel_stats = df.groupby('channel').agg({
-            'impressions_cost': 'sum',
-            'purchases': 'sum',
-            'product_sales': 'sum'
-        }).reset_index()
-
-        channel_stats['ROAS'] = channel_stats['product_sales'] / channel_stats['impressions_cost']
-        channel_stats = channel_stats.sort_values('impressions_cost', ascending=False)
-
-        st.dataframe(channel_stats, width='stretch')
-
-        # Quick chart
-        fig = go.Figure(data=[
-            go.Bar(name='Spend', x=channel_stats['channel'], y=channel_stats['impressions_cost']),
-            go.Bar(name='Sales', x=channel_stats['channel'], y=channel_stats['product_sales'])
-        ])
-        fig.update_layout(barmode='group', title="Channel Spend vs Sales")
-        st.plotly_chart(fig, config={'responsive': True})
-    else:
-        st.info("Upload data to see campaign summary")
+        st.metric(
+            label="**Total Conversions**",
+            value=f"{total_conversions:,.0f}",
+            delta=None
+        )
 
 def data_table_tab():
     st.header("Data Table & Filters")
