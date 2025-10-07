@@ -189,7 +189,7 @@ def display_styled_table(df, key_prefix=""):
     column_config = {
         col: st.column_config.Column(width=110) for col in df.columns
     }
-    st.dataframe(styled_df, column_config=column_config)
+    st.dataframe(styled_df, column_config=column_config, hide_index=True)
 
 def display_export_controls(df, key_prefix="", default_all=True):
     """Display export controls for data."""
