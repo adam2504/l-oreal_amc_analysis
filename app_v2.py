@@ -6,9 +6,10 @@ import ast
 import re
 from collections import defaultdict, Counter
 import numpy as np
+import time
 
 # Configure page
-st.set_page_config(page_title="AMC Analytics L'Oréal v2", page_icon="📊", layout="wide")
+st.set_page_config(page_title="AMC Analytics L'Oréal v3", page_icon="📊", layout="wide")
 
 # Initialize session state
 if 'data' not in st.session_state:
@@ -25,7 +26,7 @@ DEFAULT_COLORS = [
 ]
 
 def main():
-    st.title("📊 AMC Analytics L'Oréal v2")
+    st.title("📊 AMC Analytics L'Oréal v3")
 
     # Tab layout
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["📁 Data Upload", "📋 Data Workspace", "📊 Media Mix", "🔀 Path to Conversion", "📖 Documentation"])
@@ -57,20 +58,74 @@ def main():
 def data_upload_tab():
     st.header("Upload CSV File")
 
-    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    uploaded_file = st.file_uploader(
+        "Choose a CSV file",
+        type="csv",
+        help="Upload your AMC analytics CSV file. Maximum size: 50MB, CSV format only."
+    )
 
     if uploaded_file is not None:
-        # Check if it's a new upload
-        current_hash = hash(uploaded_file.getvalue())
-        if 'file_hash' not in st.session_state or st.session_state.file_hash != current_hash:
-            st.session_state.file_hash = current_hash
-            st.toast("File uploaded successfully!", icon="✅")
+        try:
+            # Validation: Check file size
+            if uploaded_file.size > 50 * 1024 * 1024:  # 50MB limit
+                st.error("❌ File too large! Maximum file size is 50MB.")
+                return
 
-        # Read CSV file (do this always for data processing)
-        df = pd.read_csv(uploaded_file, low_memory=False)
+            # Validation: Check file extension
+            if not uploaded_file.name.lower().endswith('.csv'):
+                st.error("❌ Please upload a CSV file only.")
+                return
 
-        # Data cleaning and preprocessing
-        df = preprocess_data(df)
+            # Check if it's a new upload
+            current_hash = hash(uploaded_file.getvalue())
+            if 'file_hash' not in st.session_state or st.session_state.file_hash != current_hash:
+                st.session_state.file_hash = current_hash
+                st.toast("File uploaded successfully!", icon="✅")
+
+            # Read CSV file (do this always for data processing)
+            with st.spinner("Loading CSV file..."):
+                try:
+                    df = pd.read_csv(uploaded_file, low_memory=False)
+                except pd.errors.EmptyDataError:
+                    st.error("❌ The uploaded file is empty or contains no data.")
+                    return
+                except pd.errors.ParserError as e:
+                    st.error(f"❌ Error parsing CSV file: {str(e)}")
+                    return
+                except Exception as e:
+                    st.error(f"❌ Error reading file: {str(e)}")
+                    return
+
+            # Basic validation
+            if df.empty:
+                st.error("❌ The uploaded file contains no rows.")
+                return
+
+            if len(df.columns) < 3:
+                st.warning("⚠️ Warning: The file has very few columns. This might not be AMC data.")
+
+            # Data cleaning and preprocessing
+            with st.spinner("Processing data..."):
+                try:
+                    progress_bar = st.progress(0, text="Preprocessing data...")
+                    df = preprocess_data(df)
+                    progress_bar.progress(100, text="Preprocessing complete!")
+                    time.sleep(0.5)  # Brief pause to show completion
+                    progress_bar.empty()
+                except Exception as e:
+                    st.error(f"❌ Error processing data: {str(e)}")
+                    return
+
+        except Exception as e:
+            st.error(f"❌ Unexpected error during file upload: {str(e)}")
+            return
+
+        # Video information checkbox
+        has_video = st.checkbox(
+            "File contains video information",
+            value=True,
+            help="Check if your data includes video-related KPIs. Unchecking will filter them out."
+        )
 
         # Basic statistics
         st.subheader("Data Overview")
@@ -94,9 +149,6 @@ def data_upload_tab():
                     st.write("No channels found in the data")
             else:
                 st.write("Channels not available")
-
-        # Video information checkbox
-        has_video = st.checkbox("File contains video information", value=True)
 
         # Check for changes in video checkbox
         if has_video != st.session_state.previous_has_video:
@@ -180,6 +232,7 @@ def data_upload_tab():
         else:
             st.info("Upload data to see campaign summary")
 
+@st.cache_data
 def preprocess_data(df):
     """Preprocess the uploaded data"""
     # Convert numerical columns
@@ -247,13 +300,13 @@ def data_table_tab():
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric(f"Average {selected_metric}",
+                st.metric(f"**Average** {selected_metric}",
                          f"{df[selected_metric].mean():.2f}")
             with col2:
-                st.metric(f"Max {selected_metric}",
+                st.metric(f"**Max** {selected_metric}",
                          f"{df[selected_metric].max():.2f}")
             with col3:
-                st.metric(f"Min {selected_metric}",
+                st.metric(f"**Min** {selected_metric}",
                          f"{df[selected_metric].min():.2f}")
 
     # Extract path channels for filter
@@ -330,6 +383,31 @@ def data_table_tab():
         filtered_df_sorted = filtered_df.sort_values(by=sort_by, ascending=ascending)
     else:
         filtered_df_sorted = filtered_df
+
+    # Add search functionality
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        search_term = st.text_input(
+            "🔍 Search in data",
+            placeholder="Type to filter rows...",
+            key="data_workspace_search",
+            help="Search across all text columns in the table"
+        )
+    with col2:
+        search_button = st.button("Search", key="data_workspace_search_button", help="Apply search filter")
+
+    # Apply search filter
+    if search_term and len(search_term.strip()) > 0:
+        search_filtered_df = filtered_df_sorted.copy()
+        # Search across all string/text columns
+        text_columns = search_filtered_df.select_dtypes(include=['object', 'string']).columns
+        mask = pd.Series(False, index=search_filtered_df.index)
+        for col in text_columns:
+            mask |= search_filtered_df[col].astype(str).str.contains(search_term, case=False, na=False)
+        search_filtered_df = search_filtered_df[mask]
+
+        filtered_df_sorted = search_filtered_df
+        st.info(f"🔍 Found {len(filtered_df_sorted)} rows matching '{search_term}'")
 
     # Limit to max_rows for display
     display_df = filtered_df_sorted.head(max_rows)
@@ -426,7 +504,13 @@ def data_table_tab():
 
     # Color picker for channels (moved to end)
     st.subheader("Channel Colors")
-    color_cols = st.columns(min(4, len(st.session_state.channel_colors)))
+    num_channels = len(st.session_state.channel_colors)
+
+    if num_channels > 0:
+        color_cols = st.columns(max(1, min(4, num_channels)))
+    else:
+        st.info("💡 Upload data to see channel color options")
+        color_cols = None
 
     for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
         with color_cols[i % 4]:
@@ -471,13 +555,13 @@ def media_mix_tab():
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric(f"Average {selected_metric}",
+                st.metric(f"**Average** {selected_metric}",
                          f"{filtered_df_for_stats[selected_metric].mean():.2f}")
             with col2:
-                st.metric(f"Max {selected_metric}",
+                st.metric(f"**Max** {selected_metric}",
                          f"{filtered_df_for_stats[selected_metric].max():.2f}")
             with col3:
-                st.metric(f"Min {selected_metric}",
+                st.metric(f"**Min** {selected_metric}",
                          f"{filtered_df_for_stats[selected_metric].min():.2f}")
 
     # Filters
@@ -662,13 +746,18 @@ def media_mix_tab():
 
     # Color picker for channels
     st.subheader("Channel Colors")
-    color_cols = st.columns(min(4, len(st.session_state.channel_colors)))
+    num_channels = len(st.session_state.channel_colors)
 
-    for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
-        with color_cols[i % 4]:
-            new_color = st.color_picker(f"{channel}", color, key=f"media_mix_color_{channel}")
-            if new_color != color:
-                st.session_state.channel_colors[channel] = new_color
+    if num_channels > 0:
+        color_cols = st.columns(max(1, min(4, num_channels)))
+
+        for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
+            with color_cols[i % 4]:
+                new_color = st.color_picker(f"{channel}", color, key=f"media_mix_color_{channel}")
+                if new_color != color:
+                    st.session_state.channel_colors[channel] = new_color
+    else:
+        st.info("💡 Upload data to see channel color options")
 
     # Display plots separately if generated
     if generate_plots:
@@ -734,13 +823,13 @@ def path_to_conversion_tab():
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric(f"Average {selected_metric}",
+                st.metric(f"**Average** {selected_metric}",
                          f"{filtered_df_for_stats[selected_metric].mean():.2f}")
             with col2:
-                st.metric(f"Max {selected_metric}",
+                st.metric(f"**Max** {selected_metric}",
                          f"{filtered_df_for_stats[selected_metric].max():.2f}")
             with col3:
-                st.metric(f"Min {selected_metric}",
+                st.metric(f"**Min** {selected_metric}",
                          f"{filtered_df_for_stats[selected_metric].min():.2f}")
 
     # Filters
@@ -923,13 +1012,18 @@ def path_to_conversion_tab():
 
     # Color picker for channels
     st.subheader("Channel Colors")
-    color_cols = st.columns(min(4, len(st.session_state.channel_colors)))
+    num_channels = len(st.session_state.channel_colors)
 
-    for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
-        with color_cols[i % 4]:
-            new_color = st.color_picker(f"{channel}", color, key=f"path_to_conversion_color_{channel}")
-            if new_color != color:
-                st.session_state.channel_colors[channel] = new_color
+    if num_channels > 0:
+        color_cols = st.columns(max(1, min(4, num_channels)))
+
+        for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
+            with color_cols[i % 4]:
+                new_color = st.color_picker(f"{channel}", color, key=f"path_to_conversion_color_{channel}")
+                if new_color != color:
+                    st.session_state.channel_colors[channel] = new_color
+    else:
+        st.info("💡 Upload data to see channel color options")
 
     # Display plots separately if generated
     if generate_plots:
