@@ -46,6 +46,39 @@ def get_column_highlights(df):
 
     return existing_conv_cols, existing_cons_cols
 
+def format_path_channels(path):
+    """
+    Format path channels from "1/DSP, 2/DSP BRAND STORE" to "[DSP] -> [DSP BRAND STORE]"
+    """
+    if pd.isna(path) or not path:
+        return ""
+
+    # Remove brackets if present
+    path_clean = str(path).replace('[', '').replace(']', '')
+
+    # Split on comma and extract channel names after the last slash
+    channels = []
+    if ',' in path_clean:
+        parts = path_clean.split(',')
+        for part in parts:
+            part = part.strip()
+            # Extract everything after the last slash and strip
+            if '/' in part:
+                channel = part.split('/')[-1].strip()
+            else:
+                channel = part.strip()
+            channels.append(channel)
+    else:
+        # Single channel - extract everything after the last slash and strip
+        if '/' in path_clean:
+            channels = [path_clean.split('/')[-1].strip()]
+        else:
+            channels = [path_clean.strip()]
+
+    # Format as channel1 -> channel2 -> ...
+    formatted_path = ' -> '.join(channels)
+    return formatted_path
+
 def display_quick_stats(df, key_prefix=""):
     """Display quick statistics section."""
     if len(df) > 0:
@@ -1036,7 +1069,7 @@ def path_to_conversion_tab():
                 ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
                 consideration_data.append({
-                    'Type de parcours': str(path).replace('[', '').replace(']', ''),
+                    'Type de parcours': format_path_channels(path),
                     'CPDPV post clic': avg_cpdpv,
                     'Reach': total_reach,
                     'Nb pages vues': total_dpv,
@@ -1057,7 +1090,7 @@ def path_to_conversion_tab():
 
             # Format the DataFrame for display
             styled_consideration_df = consideration_df.style.format({
-                'CPDPV post clic': '€{:.2f}',
+                'CPDPV post clic': '{:.2f}€',
                 'Reach': '{:,.0f}',
                 'Nb pages vues': '{:,.0f}',
                 'Part de ventes NTB': '{:.1f}%'
@@ -1087,7 +1120,7 @@ def path_to_conversion_tab():
                 ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
 
                 conversion_data.append({
-                    'Type de parcours': str(path).replace('[', '').replace(']', ''),
+                    'Type de parcours': format_path_channels(path),
                     'Taux de conversion': conversion_rate,
                     'ROAS': roas,
                     'Nombre de conversions': total_purchases,
