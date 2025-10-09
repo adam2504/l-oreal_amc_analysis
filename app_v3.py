@@ -757,16 +757,19 @@ def campaign_summary_tab():
             def create_kpi_metric(label, value, format_type="default", delta_color=None):
                 """Create a KPI metric with proper formatting"""
                 if format_type == "currency":
-                    if abs(value) < 1000:
-                        formatted_value = f"{value:,.2f} €"
+                    if abs(value) < 1:
+                        # Keep decimal format for very small values like 0.60 €
+                        formatted_value = f"{value:,.2f} €".replace('.', ',')
+                    elif abs(value) < 1000:
+                        formatted_value = f"{value:.2f} €".replace('.', ' ').replace(',', ' ')
                     else:
-                        formatted_value = f"{value:,.0f} €"
+                        formatted_value = f"{value:,.0f} €".replace(',', ' ')
                 elif format_type == "percentage":
                     formatted_value = f"{value:.2f}%"
                 elif format_type == "decimal":
                     formatted_value = f"{value:.2f}"
                 elif format_type == "integer":
-                    formatted_value = f"{value:,.0f}"
+                    formatted_value = f"{value:,.0f}".replace(',', ' ')
                 else:
                     formatted_value = str(value)
 
