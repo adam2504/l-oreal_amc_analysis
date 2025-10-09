@@ -1044,6 +1044,15 @@ def path_to_conversion_tab():
         if consideration_data:
             consideration_df = pd.DataFrame(consideration_data)
 
+            # Column configuration: Type de parcours adapts to content, others to title length
+            column_config = {
+                "Type de parcours": st.column_config.Column(width="auto"),
+                "CPDPV post clic": st.column_config.Column(width=120),  # Longer title
+                "Reach": st.column_config.Column(width="small"),  # Short title
+                "Nb pages vues": st.column_config.Column(width=120),  # Medium title
+                "Part de ventes NTB": st.column_config.Column(width=130)  # Long title
+            }
+
             # Format the DataFrame for display
             styled_consideration_df = consideration_df.style.format({
                 'CPDPV post clic': '€{:.2f}',
@@ -1052,7 +1061,7 @@ def path_to_conversion_tab():
                 'Part de ventes NTB': '{:.1f}%'
             })
 
-            st.dataframe(styled_consideration_df, use_container_width=True, hide_index=True)
+            st.dataframe(styled_consideration_df, column_config=column_config, use_container_width=False, hide_index=True)
 
     # Right side - Conversion Table
     with col2:
@@ -1084,7 +1093,16 @@ def path_to_conversion_tab():
                 })
 
         if conversion_data:
-            conversion_df = pd.DataFrame(conversion_data).reset_index(drop=True)
+            conversion_df = pd.DataFrame(conversion_data)
+
+            # Column configuration: Type de parcours adapts to content, others to title length
+            column_config = {
+                "Type de parcours": st.column_config.Column(width="auto"),
+                "Taux de conversion": st.column_config.Column(width=150),  # Longer title
+                "ROAS": st.column_config.Column(width="small"),  # Short title
+                "Nombre de conversions": st.column_config.Column(width=150),  # Long title
+                "Part de ventes NTB": st.column_config.Column(width=130)  # Long title
+            }
 
             # Format the DataFrame for display
             styled_conversion_df = conversion_df.style.format({
@@ -1094,7 +1112,7 @@ def path_to_conversion_tab():
                 'Part de ventes NTB': '{:.1f}%'
             })
 
-            st.dataframe(styled_conversion_df, use_container_width=True, hide_index=True)
+            st.dataframe(styled_conversion_df, column_config=column_config, use_container_width=False, hide_index=True)
 
 
 def create_simple_path_diagram(channels, color_dict):
