@@ -649,10 +649,10 @@ def campaign_summary_tab():
         total_cost_all = channel_cost['impressions_cost'].sum()
         channel_cost['percentage'] = (channel_cost['impressions_cost'] / total_cost_all) * 100
 
-        # Create 100% stacked bar chart
+        # Create horizontal 100% stacked bar chart
         fig = go.Figure()
 
-        for idx, row in channel_cost.iterrows():
+        for idx, row in channel_cost.sort_values('percentage', ascending=True).iterrows():
             channel = row['channel']
             percentage = row['percentage']
 
@@ -661,9 +661,10 @@ def campaign_summary_tab():
 
             fig.add_trace(go.Bar(
                 name=f"{channel} ({percentage:.1f}%)",
-                x=['Cost Distribution'],
-                y=[percentage],
+                y=['Cost Distribution'],
+                x=[percentage],
                 marker_color=color,
+                orientation='h',
                 showlegend=True,
                 text=f"{percentage:.1f}%",
                 textposition="inside"
@@ -671,12 +672,12 @@ def campaign_summary_tab():
 
         fig.update_layout(
             barmode='stack',
-            title="Channel Cost Distribution (100%)",
             xaxis_title="",
-            yaxis_title="Percentage",
-            yaxis_range=[0, 100],
+            yaxis_title="",
+            xaxis_range=[0, 100],
             showlegend=True,
-            height=400
+            height=300,
+            width=600
         )
 
         st.plotly_chart(fig, use_container_width=True)
