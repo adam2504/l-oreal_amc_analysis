@@ -660,7 +660,7 @@ def campaign_summary_tab():
             color = st.session_state.channel_colors.get(channel, DEFAULT_COLORS[idx % len(DEFAULT_COLORS)])
 
             fig.add_trace(go.Bar(
-                name=f"{channel} ({percentage:.1f}%)",
+                name=channel,
                 y=['Cost Distribution'],
                 x=[percentage],
                 marker_color=color,
@@ -676,7 +676,14 @@ def campaign_summary_tab():
             yaxis_title="",
             xaxis_range=[0, 100],
             showlegend=True,
-            height=300,
+            legend=dict(
+                x=0.5,
+                y=-0.2,
+                xanchor='center',
+                yanchor='top',
+                orientation='h'
+            ),
+            height=400,
             width=600
         )
 
