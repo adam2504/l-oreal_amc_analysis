@@ -708,6 +708,9 @@ def campaign_summary_tab():
         col_left, col_right = st.columns([4, 1])
 
         with col_right:
+            # Vertical centering with empty spaces (to align with the 4 KPI rows)
+            st.markdown("<br>", unsafe_allow_html=True)  # Top spacing
+
             # Path Channel filter (multiselect)
             path_channels = extract_path_channels(df)
             selected_path_channels = st.multiselect(
@@ -725,6 +728,9 @@ def campaign_summary_tab():
                 index=0,
                 key="kpi_path_type"
             )
+
+            # Bottom spacing to match the top
+            st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 
             # Apply KPI filters to create filtered dataframe
             kpi_df = df_with_channel_count.copy()
