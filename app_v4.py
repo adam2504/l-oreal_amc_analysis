@@ -1016,64 +1016,83 @@ def path_to_conversion_tab():
     # Extract unique paths for consideration table
     consideration_paths = display_df['path'].dropna().unique()
 
-    # Create two columns layout for the visual tables
+    # Create two column layout for the visual tables
     col1, col2 = st.columns(2)
 
-    # Left side - Consideration Table
+    # Left side - Consideration Table with Charts in First Column
     with col1:
         st.subheader("🔍 Considération")
 
-        # Prepare consideration table data
-        consideration_data = []
-        for path in consideration_paths:
-            path_df = filtered_df[filtered_df['path'] == path]
-            if len(path_df) > 0:
+        if consideration_paths.size > 0:
+            # Create table header
+            header_cols = st.columns([2, 1, 1, 1])
+            with header_cols[0]:
+                st.write("**Parcours Visuel**")
+            with header_cols[1]:
+                st.write("**CPDPV post clic**")
+            with header_cols[2]:
+                st.write("**Reach**")
+            with header_cols[3]:
+                st.write("**Part de ventes NTB**")
+
+            st.markdown("---")
+
+            # Create table rows
+            for path in consideration_paths:
+                path_df = filtered_df[filtered_df['path'] == path]
+
                 # Calculate aggregated metrics
                 total_reach = path_df['REACH'].sum() if 'REACH' in path_df.columns else 0
                 total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
                 total_cost = path_df['COST AMC'].sum() if 'COST AMC' in path_df.columns else 0
                 avg_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
-                ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
+                ntb_percentage = path_df['Part de ventes NTB (%)'].mean() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
-                consideration_data.append({
-                    'Type de parcours': str(path).replace('[', '').replace(']', ''),
-                    'CPDPV post clic': avg_cpdpv,
-                    'Reach': total_reach,
-                    'Nb pages vues': total_dpv,
-                    'Part de ventes NTB': ntb_percentage
-                })
+                # Create table row with chart in first column
+                row_cols = st.columns([2, 1, 1, 1])
 
-        if consideration_data:
-            consideration_df = pd.DataFrame(consideration_data)
+                with row_cols[0]:
+                    try:
+                        channels = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                        unique_channels = list(dict.fromkeys(channels))
+                        fig = create_mini_path_diagram(unique_channels, st.session_state.channel_colors)
+                        st.plotly_chart(fig, config={'responsive': True, 'displayModeBar': False}, key=f"table_consideration_{hash(path)}")
+                    except:
+                        st.write("🔄")
 
-            # Column configuration: Type de parcours adapts to content, others to title length
-            column_config = {
-                "Type de parcours": st.column_config.Column(width="auto"),
-                "CPDPV post clic": st.column_config.Column(width=120),  # Longer title
-                "Reach": st.column_config.Column(width="small"),  # Short title
-                "Nb pages vues": st.column_config.Column(width=120),  # Medium title
-                "Part de ventes NTB": st.column_config.Column(width=130)  # Long title
-            }
+                with row_cols[1]:
+                    st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 200px; font-size: 18px; font-weight: bold;'>{f"€{avg_cpdpv:.2f}" if avg_cpdpv > 0 else "∞"}</div>", unsafe_allow_html=True)
 
-            # Format the DataFrame for display
-            styled_consideration_df = consideration_df.style.format({
-                'CPDPV post clic': '€{:.2f}',
-                'Reach': '{:,.0f}',
-                'Nb pages vues': '{:,.0f}',
-                'Part de ventes NTB': '{:.1f}%'
-            })
+                with row_cols[2]:
+                    st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 200px; font-size: 18px; font-weight: bold;'>{total_reach:,.0f}</div>", unsafe_allow_html=True)
 
-            st.dataframe(styled_consideration_df, column_config=column_config, width='content', hide_index=True)
+                with row_cols[3]:
+                    st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 200px; font-size: 18px; font-weight: bold;'>{ntb_percentage:.1f}%</div>", unsafe_allow_html=True)
 
-    # Right side - Conversion Table
+                st.markdown("---")
+
+    # Right side - Conversion Table with Charts in First Column
     with col2:
         st.subheader("🎯 Conversion")
 
-        # Prepare conversion table data
-        conversion_data = []
-        for path in consideration_paths:
-            path_df = filtered_df[filtered_df['path'] == path]
-            if len(path_df) > 0:
+        if consideration_paths.size > 0:
+            # Create table header
+            header_cols = st.columns([2, 1, 1, 1])
+            with header_cols[0]:
+                st.write("**Parcours Visuel**")
+            with header_cols[1]:
+                st.write("**Taux de conversion**")
+            with header_cols[2]:
+                st.write("**ROAS**")
+            with header_cols[3]:
+                st.write("**Part de ventes NTB**")
+
+            st.markdown("---")
+
+            # Create table rows
+            for path in consideration_paths:
+                path_df = filtered_df[filtered_df['path'] == path]
+
                 # Calculate aggregated metrics
                 total_purchases = path_df['PURCHASES'].sum() if 'PURCHASES' in path_df.columns else 0
                 total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
@@ -1086,36 +1105,108 @@ def path_to_conversion_tab():
 
                 ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
 
-                conversion_data.append({
-                    'Type de parcours': str(path).replace('[', '').replace(']', ''),
-                    'Taux de conversion': conversion_rate,
-                    'ROAS': roas,
-                    'Nombre de conversions': total_purchases,
-                    'Part de ventes NTB': ntb_percentage
-                })
+                # Create table row with chart in first column
+                row_cols = st.columns([2, 1, 1, 1])
 
-        if conversion_data:
-            conversion_df = pd.DataFrame(conversion_data)
+                with row_cols[0]:
+                    try:
+                        channels = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                        unique_channels = list(dict.fromkeys(channels))
+                        fig = create_mini_path_diagram(unique_channels, st.session_state.channel_colors)
+                        st.plotly_chart(fig, config={'responsive': True, 'displayModeBar': False}, key=f"table_conversion_{hash(path)}")
+                    except:
+                        st.write("🔄")
 
-            # Column configuration: Type de parcours adapts to content, others to title length
-            column_config = {
-                "Type de parcours": st.column_config.Column(width="auto"),
-                "Taux de conversion": st.column_config.Column(width=150),  # Longer title
-                "ROAS": st.column_config.Column(width="small"),  # Short title
-                "Nombre de conversions": st.column_config.Column(width=150),  # Long title
-                "Part de ventes NTB": st.column_config.Column(width=130)  # Long title
-            }
+                with row_cols[1]:
+                    st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 200px; font-size: 18px; font-weight: bold;'>{f"{conversion_rate:.2f}%" if conversion_rate > 0 else "∞"}</div>", unsafe_allow_html=True)
 
-            # Format the DataFrame for display
-            styled_conversion_df = conversion_df.style.format({
-                'Taux de conversion': '{:.2f}%',
-                'ROAS': '{:.2f}',
-                'Nombre de conversions': '{:,.0f}',
-                'Part de ventes NTB': '{:.1f}%'
-            })
+                with row_cols[2]:
+                    st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 200px; font-size: 18px; font-weight: bold;'>{f"{roas:.2f}" if roas > 0 else "∞"}</div>", unsafe_allow_html=True)
 
-            st.dataframe(styled_conversion_df, column_config=column_config, width='content', hide_index=True)
+                with row_cols[3]:
+                    st.markdown(f"<div style='display: flex; align-items: center; justify-content: center; height: 200px; font-size: 18px; font-weight: bold;'>{ntb_percentage:.1f}%</div>", unsafe_allow_html=True)
 
+                st.markdown("---")
+
+
+def create_mini_path_diagram(channels, color_dict):
+    """
+    Create a compact flow diagram with smaller squares for each channel connected by arrows.
+    Perfect for embedding in expander sections.
+    """
+    fig = go.Figure()
+
+    n_channels = len(channels)
+
+    if n_channels == 0:
+        fig.update_layout(title="No channels found", height=200)
+        return fig
+
+    # Create compact squares (smaller than the original)
+    for i, channel in enumerate(channels):
+        x_start = i * 3.5  # Compact spacing between squares
+
+        # Create compact square shape (smaller than original)
+        square_x = [x_start, x_start + 2.5, x_start + 2.5, x_start]
+        square_y = [-1.25, -1.25, 1.25, 1.25]  # Smaller height
+
+        color = color_dict.get(channel, DEFAULT_COLORS[i % len(DEFAULT_COLORS)])
+
+        # Add filled compact square
+        fig.add_trace(go.Scatter(
+            x=square_x + [square_x[0]],  # Close the square
+            y=square_y + [square_y[0]],
+            fill="toself",
+            fillcolor=color,
+            mode='lines',
+            line=dict(color=color, width=2),
+            hoverinfo='skip',
+            showlegend=False
+        ))
+
+        # Add compact channel text in center
+        fig.add_annotation(
+            x=x_start + 1.25,  # Center of square
+            y=0,
+            text=channel[:6] if len(channel) > 6 else channel,  # Truncate long channel names
+            showarrow=False,
+            font=dict(size=12, color='white', weight='bold'),
+            xanchor='center',
+            yanchor='middle'
+        )
+
+    # Add compact arrows between squares if more than one channel
+    if n_channels > 1:
+        for i in range(n_channels - 1):
+            arrow_x = (i + 1) * 3.5 - 0.75  # Centered between squares
+            fig.add_annotation(
+                x=arrow_x,
+                y=0,
+                text="→",
+                showarrow=False,
+                font=dict(size=24, color='black'),  # Smaller arrows
+                xanchor='center',
+                yanchor='middle'
+            )
+
+    # Set compact axis ranges
+    x_axis_max = (n_channels - 1) * 3.5 + 2.5 + 1.0  # Last square + margin
+    x_axis_min = -1.0
+
+    fig.update_layout(
+        height=200,  # Much smaller height
+        width=max(300, int(x_axis_max * 50)),  # Appropriate width
+        showlegend=False,
+        plot_bgcolor='white',
+        paper_bgcolor='white',
+        margin=dict(l=5, r=5, t=5, b=5)  # Tight margins
+    )
+
+    # Completely hide axes
+    fig.update_xaxes(visible=False, showgrid=False)
+    fig.update_yaxes(visible=False, showgrid=False)
+
+    return fig
 
 def create_simple_path_diagram(channels, color_dict):
     """
