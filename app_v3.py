@@ -684,7 +684,7 @@ def campaign_summary_tab():
             width=600
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig)
 
         # KPI Grid - 3x4 metrics grid with filters
         st.subheader("Key Campaign Metrics")
@@ -980,7 +980,7 @@ def media_mix_tab():
                     fig = go.Figure(data=[go.Bar(x=['DEBUG ERROR'], y=[1])])
                     fig.update_layout(title=f"Error: {str(e)[:100]}", height=300)
 
-                st.plotly_chart(fig, config={'responsive': True}, key=f"media_mix_chart_{idx}")
+                st.plotly_chart(fig, config={'responsive': True, 'displayModeBar': False}, key=f"media_mix_chart_{idx}")
 
 
 def path_to_conversion_tab():
@@ -1009,7 +1009,9 @@ def path_to_conversion_tab():
 
     # Add derived columns for NTB percentage
     if 'NTB' in display_df.columns and 'PURCHASES' in display_df.columns:
-        display_df['Part de ventes NTB (%)'] = (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)
+        display_df = display_df.assign(
+            **{'Part de ventes NTB (%)': (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)}
+        )
 
     # Extract unique paths for consideration table
     consideration_paths = display_df['path'].dropna().unique()
@@ -1061,7 +1063,7 @@ def path_to_conversion_tab():
                 'Part de ventes NTB': '{:.1f}%'
             })
 
-            st.dataframe(styled_consideration_df, column_config=column_config, use_container_width=False, hide_index=True)
+            st.dataframe(styled_consideration_df, column_config=column_config, width='content', hide_index=True)
 
     # Right side - Conversion Table
     with col2:
@@ -1112,7 +1114,7 @@ def path_to_conversion_tab():
                 'Part de ventes NTB': '{:.1f}%'
             })
 
-            st.dataframe(styled_conversion_df, column_config=column_config, use_container_width=False, hide_index=True)
+            st.dataframe(styled_conversion_df, column_config=column_config, width='content', hide_index=True)
 
 
 def create_simple_path_diagram(channels, color_dict):
