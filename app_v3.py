@@ -988,15 +988,11 @@ def path_to_conversion_tab():
 
     df = st.session_state.data.copy()
 
-    # Extract path channels
+    # Extract path channels for filters
     path_channels = extract_path_channels(df)
 
     # Fixed analysis level
     analysis_level_filter = 'Path to conversion'
-
-    # Show quick stats for filtered data
-    filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
-    display_quick_stats(filtered_df_for_stats, "path_to_conversion")
 
     # Get filters
     filters = display_filters(df, path_channels, analysis_level_filter, "path_to_conversion")
@@ -1004,43 +1000,101 @@ def path_to_conversion_tab():
     # Apply filters
     filtered_df = apply_filters(df, filters, analysis_level_filter)
 
+    if len(filtered_df) == 0:
+        st.warning("No data available for Path to Conversion analysis with current filters.")
+        return
+
     # Sorting and display controls
     display_df = display_sorting_controls(filtered_df, "path_to_conversion")
 
-    # Display table
-    display_styled_table(display_df, "path_to_conversion")
+    # Add derived columns for NTB percentage
+    if 'NTB' in display_df.columns and 'PURCHASES' in display_df.columns:
+        display_df['Part de ventes NTB (%)'] = (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)
 
-    # Export controls
-    display_export_controls(display_df, "path_to_conversion", default_all=False)
+    # Extract unique paths for consideration table
+    consideration_paths = display_df['path'].dropna().unique()
 
-    # Generate plots button
-    generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_path_to_conversion")
+    # Create two columns layout for the visual tables
+    col1, col2 = st.columns(2)
 
-    # Channel color pickers
-    display_channel_color_pickers("path_to_conversion")
+    # Left side - Consideration Table
+    with col1:
+        st.subheader("🔍 Considération")
 
-    # Display plots if generated
-    if generate_plots:
-        st.subheader("📊 Charts for Each Row")
-        st.info(f"Displaying charts for the {len(display_df)} rows shown above")
+        # Prepare consideration table data
+        consideration_data = []
+        for path in consideration_paths:
+            path_df = filtered_df[filtered_df['path'] == path]
+            if len(path_df) > 0:
+                # Calculate aggregated metrics
+                total_reach = path_df['REACH'].sum() if 'REACH' in path_df.columns else 0
+                total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
+                total_cost = path_df['COST AMC'].sum() if 'COST AMC' in path_df.columns else 0
+                avg_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
+                ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
 
-        for idx, row in display_df.iterrows():
-            path_value = str(row.get('path', f'Row {idx}'))
-            path_clean = path_value.replace('[', '').replace(']', '').strip()
+                consideration_data.append({
+                    'Type de parcours': str(path).replace('[', '').replace(']', ''),
+                    'CPDPV post clic': avg_cpdpv,
+                    'Reach': total_reach,
+                    'Nb pages vues': total_dpv,
+                    'Part de ventes NTB': ntb_percentage
+                })
 
-            with st.expander(f"📈 Chart for Path: {path_clean}", expanded=False):
-                try:
-                    matches = re.findall(r'/([A-Z\s]+)', str(row['path']).upper())
-                    if matches:
-                        fig = create_simple_path_diagram(matches, st.session_state.channel_colors)
-                    else:
-                        fig = go.Figure(data=[go.Bar(x=['No path data'], y=[1])])
-                        fig.update_layout(title="No conversion path found", height=300)
-                except:
-                    fig = go.Figure(data=[go.Bar(x=['Error'], y=[1])])
-                    fig.update_layout(title="Error creating chevron diagram", height=300)
+        if consideration_data:
+            consideration_df = pd.DataFrame(consideration_data).reset_index(drop=True)
 
-                st.plotly_chart(fig, config={'responsive': True}, key=f"path_to_conversion_chart_{idx}")
+            # Format the DataFrame for display
+            styled_consideration_df = consideration_df.style.format({
+                'CPDPV post clic': '€{:.2f}',
+                'Reach': '{:,.0f}',
+                'Nb pages vues': '{:,.0f}',
+                'Part de ventes NTB': '{:.1f}%'
+            })
+
+            st.dataframe(styled_consideration_df, use_container_width=True)
+
+    # Right side - Conversion Table
+    with col2:
+        st.subheader("🎯 Conversion")
+
+        # Prepare conversion table data
+        conversion_data = []
+        for path in consideration_paths:
+            path_df = filtered_df[filtered_df['path'] == path]
+            if len(path_df) > 0:
+                # Calculate aggregated metrics
+                total_purchases = path_df['PURCHASES'].sum() if 'PURCHASES' in path_df.columns else 0
+                total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
+                conversion_rate = (total_purchases / total_dpv * 100) if total_dpv > 0 else 0
+
+                # Calculate ROAS
+                total_cost = path_df['COST AMC'].sum() if 'COST AMC' in path_df.columns else 0
+                total_revenue = path_df['REVENUE'].sum() if 'REVENUE' in path_df.columns else 0
+                roas = total_revenue / total_cost if total_cost > 0 else 0
+
+                ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
+
+                conversion_data.append({
+                    'Type de parcours': str(path).replace('[', '').replace(']', ''),
+                    'Taux de conversion': conversion_rate,
+                    'ROAS': roas,
+                    'Nombre de conversions': total_purchases,
+                    'Part de ventes NTB': ntb_percentage
+                })
+
+        if conversion_data:
+            conversion_df = pd.DataFrame(conversion_data).reset_index(drop=True)
+
+            # Format the DataFrame for display
+            styled_conversion_df = conversion_df.style.format({
+                'Taux de conversion': '{:.2f}%',
+                'ROAS': '{:.2f}',
+                'Nombre de conversions': '{:,.0f}',
+                'Part de ventes NTB': '{:.1f}%'
+            })
+
+            st.dataframe(styled_conversion_df, use_container_width=True)
 
 
 def create_simple_path_diagram(channels, color_dict):
