@@ -686,6 +686,96 @@ def campaign_summary_tab():
 
         st.plotly_chart(fig, use_container_width=True)
 
+        # KPI Grid - 3x4 metrics grid
+        st.subheader("Key Campaign Metrics")
+
+        # Helper function to create KPI metric
+        def create_kpi_metric(label, value, format_type="default", delta_color=None):
+            """Create a KPI metric with proper formatting"""
+            if format_type == "currency":
+                if abs(value) < 1000:
+                    formatted_value = f"{value:,.2f} €"
+                else:
+                    formatted_value = f"{value:,.0f} €"
+            elif format_type == "percentage":
+                formatted_value = f"{value:.2f}%"
+            elif format_type == "decimal":
+                formatted_value = f"{value:.2f}"
+            elif format_type == "integer":
+                formatted_value = f"{value:,.0f}"
+            else:
+                formatted_value = str(value)
+
+            styling = "background-color: #f0f2f6; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e0e0e0;"
+
+            st.markdown(f"""
+            <div style="{styling}">
+                <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">{label}</div>
+                <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">{formatted_value}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Row 1: Budget, Revenue, ROAS
+        st.markdown("#### Overview Metrics")
+        col1, col2, col3 = st.columns(3)
+
+        total_cost = df['impressions_cost'].sum()
+        total_revenue = df['product_sales'].sum() if 'product_sales' in df.columns else 0
+        overall_roas = total_revenue / total_cost if total_cost > 0 else 0
+
+        with col1:
+            create_kpi_metric("Total Budget Spent", total_cost, "currency")
+        with col2:
+            create_kpi_metric("Total Revenue Generated", total_revenue, "currency")
+        with col3:
+            create_kpi_metric("Overall ROAS", overall_roas, "decimal")
+
+        # Row 2: Reach, DPV, CPDPV
+        st.markdown("#### Awareness & Engagement")
+        col1, col2, col3 = st.columns(3)
+
+        total_reach = df['reach'].sum() if 'reach' in df.columns else 0
+        total_dpv = df['details_page_view_clicks'].sum() if 'details_page_view_clicks' in df.columns else 0
+        total_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
+
+        with col1:
+            create_kpi_metric("Total Reach", total_reach, "integer")
+        with col2:
+            create_kpi_metric("Total DPV", total_dpv, "integer")
+        with col3:
+            create_kpi_metric("Overall CPDPV", total_cpdpv, "currency")
+
+        # Row 3: Purchases, Conversion Rate, ROAS (detailed)
+        st.markdown("#### Purchase Performance")
+        col1, col2, col3 = st.columns(3)
+
+        total_purchases = df['purchases'].sum() if 'purchases' in df.columns else 0
+        conversion_rate = (total_purchases / total_dpv * 100) if total_dpv > 0 else 0
+        purchase_roas = total_revenue / total_cost if total_cost > 0 else 0
+
+        with col1:
+            create_kpi_metric("Total Purchases", total_purchases, "integer")
+        with col2:
+            create_kpi_metric("Conversion Rate", conversion_rate, "percentage")
+        with col3:
+            create_kpi_metric("Purchase ROAS", purchase_roas, "decimal")
+
+        # Row 4: NTB Purchases, NTB Conversion Rate, NTB ROAS
+        st.markdown("#### NTB Performance")
+        col1, col2, col3 = st.columns(3)
+
+        total_ntb_purchases = df['ntb_purchases'].sum() if 'ntb_purchases' in df.columns else 0
+        ntb_conversion_rate = (total_ntb_purchases / total_dpv * 100) if total_dpv > 0 else 0
+        ntb_revenue = df['ntb_product_sales'].sum() if 'ntb_product_sales' in df.columns else 0
+        ntb_roas = ntb_revenue / total_cost if total_cost > 0 else 0
+
+        with col1:
+            create_kpi_metric("NTB Purchases", total_ntb_purchases, "integer")
+        with col2:
+            create_kpi_metric("NTB Conversion Rate", ntb_conversion_rate, "percentage")
+        with col3:
+            create_kpi_metric("NTB ROAS", ntb_roas, "decimal")
+
         # Optional: Show table with detailed breakdown
         # st.dataframe(channel_cost[['channel', 'impressions_cost', 'percentage']].rename(
         #     columns={'channel': 'Channel', 'impressions_cost': 'Total Cost (€)', 'percentage': 'Percentage (%)'}
