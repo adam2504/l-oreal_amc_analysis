@@ -686,95 +686,150 @@ def campaign_summary_tab():
 
         st.plotly_chart(fig, use_container_width=True)
 
-        # KPI Grid - 3x4 metrics grid
+        # KPI Grid - 3x4 metrics grid with filters
         st.subheader("Key Campaign Metrics")
 
-        # Helper function to create KPI metric
-        def create_kpi_metric(label, value, format_type="default", delta_color=None):
-            """Create a KPI metric with proper formatting"""
-            if format_type == "currency":
-                if abs(value) < 1000:
-                    formatted_value = f"{value:,.2f} €"
+        # Helper function to count channels in path
+        def count_path_channels(path):
+            """Count the number of unique channels in a path."""
+            if pd.isna(path):
+                return 0
+            try:
+                matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                return len(set(matches))  # Use set to get unique channels
+            except:
+                return 0
+
+        # Add path channel count column to df
+        df_with_channel_count = df.copy()
+        df_with_channel_count['path_channel_count'] = df_with_channel_count['path'].apply(count_path_channels)
+
+        # Filters for KPIs
+        col_left, col_right = st.columns([4, 1])
+
+        with col_right:
+            # Path Channel filter (multiselect)
+            path_channels = extract_path_channels(df)
+            selected_path_channels = st.multiselect(
+                "Path Channels",
+                options=sorted(path_channels),
+                default=[],
+                key="kpi_path_channels"
+            )
+
+            # Path Type filter (mono/multi)
+            path_type_options = ["All", "Mono (1 channel)", "Multi (2+ channels)"]
+            selected_path_type = st.selectbox(
+                "Path Type",
+                options=path_type_options,
+                index=0,
+                key="kpi_path_type"
+            )
+
+            # Apply KPI filters to create filtered dataframe
+            kpi_df = df_with_channel_count.copy()
+
+            # Filter by selected path channels
+            if selected_path_channels:
+                def path_contains_channels(path, selected_channels):
+                    try:
+                        matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                        path_channels_found = set(matches)
+                        return any(channel in path_channels_found for channel in selected_channels)
+                    except:
+                        return False
+                kpi_df = kpi_df[kpi_df['path'].apply(lambda x: path_contains_channels(x, selected_path_channels))]
+
+            # Filter by path type (mono vs multi)
+            if selected_path_type == "Mono (1 channel)":
+                kpi_df = kpi_df[kpi_df['path_channel_count'] == 1]
+            elif selected_path_type == "Multi (2+ channels)":
+                kpi_df = kpi_df[kpi_df['path_channel_count'] >= 2]
+
+        with col_left:
+            # Helper function to create KPI metric
+            def create_kpi_metric(label, value, format_type="default", delta_color=None):
+                """Create a KPI metric with proper formatting"""
+                if format_type == "currency":
+                    if abs(value) < 1000:
+                        formatted_value = f"{value:,.2f} €"
+                    else:
+                        formatted_value = f"{value:,.0f} €"
+                elif format_type == "percentage":
+                    formatted_value = f"{value:.2f}%"
+                elif format_type == "decimal":
+                    formatted_value = f"{value:.2f}"
+                elif format_type == "integer":
+                    formatted_value = f"{value:,.0f}"
                 else:
-                    formatted_value = f"{value:,.0f} €"
-            elif format_type == "percentage":
-                formatted_value = f"{value:.2f}%"
-            elif format_type == "decimal":
-                formatted_value = f"{value:.2f}"
-            elif format_type == "integer":
-                formatted_value = f"{value:,.0f}"
-            else:
-                formatted_value = str(value)
+                    formatted_value = str(value)
 
-            styling = "background-color: #f0f2f6; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e0e0e0;"
+                styling = "background-color: #f0f2f6; padding: 20px; border-radius: 10px; text-align: center; border: 1px solid #e0e0e0;"
 
-            st.markdown(f"""
-            <div style="{styling}">
-                <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">{label}</div>
-                <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">{formatted_value}</div>
-            </div>
-            """, unsafe_allow_html=True)
+                st.markdown(f"""
+                <div style="{styling}">
+                    <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">{label}</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">{formatted_value}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-        # Row 1: Budget, Revenue, ROAS
-        st.markdown("#### Overview Metrics")
-        col1, col2, col3 = st.columns(3)
+            # Calculate KPIs from filtered dataframe (kpi_df)
+            total_cost_filtered = kpi_df['COST AMC'].sum()
+            total_revenue_filtered = kpi_df['REVENUE'].sum() if 'REVENUE' in kpi_df.columns else 0
+            overall_roas_filtered = total_revenue_filtered / total_cost_filtered if total_cost_filtered > 0 else 0
 
-        total_cost = df['COST AMC'].sum()
-        total_revenue = df['REVENUE'].sum() if 'REVENUE' in df.columns else 0
-        overall_roas = total_revenue / total_cost if total_cost > 0 else 0
+            total_reach_filtered = kpi_df['REACH'].sum() if 'REACH' in kpi_df.columns else 0
+            total_dpv_filtered = kpi_df['DPV'].sum() if 'DPV' in kpi_df.columns else 0
+            avg_cpdpv_filtered = total_cost_filtered / total_dpv_filtered if total_dpv_filtered > 0 else 0
 
-        with col1:
-            create_kpi_metric("Total Budget Spent", total_cost, "currency")
-        with col2:
-            create_kpi_metric("Total Revenue Generated", total_revenue, "currency")
-        with col3:
-            create_kpi_metric("Overall ROAS", overall_roas, "decimal")
+            total_purchases_filtered = kpi_df['PURCHASES'].sum() if 'PURCHASES' in kpi_df.columns else 0
+            conversion_rate_filtered = (total_purchases_filtered / total_dpv_filtered * 100) if total_dpv_filtered > 0 else 0
+            purchase_roas_filtered = total_revenue_filtered / total_cost_filtered if total_cost_filtered > 0 else 0
 
-        # Row 2: Reach, DPV, CPDPV
-        st.markdown("#### Awareness & Engagement")
-        col1, col2, col3 = st.columns(3)
+            total_ntb_purchases_filtered = kpi_df['NTB'].sum() if 'NTB' in kpi_df.columns else 0
+            ntb_conversion_rate_filtered = (total_ntb_purchases_filtered / total_dpv_filtered * 100) if total_dpv_filtered > 0 else 0
+            ntb_revenue_filtered = kpi_df['REVENUE NTB'].sum() if 'REVENUE NTB' in kpi_df.columns else 0
+            ntb_roas_filtered = ntb_revenue_filtered / total_cost_filtered if total_cost_filtered > 0 else 0
 
-        total_reach = df['REACH'].sum() if 'REACH' in df.columns else 0
-        total_dpv = df['DPV'].sum() if 'DPV' in df.columns else 0
-        total_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
+            # Row 1: Budget, Revenue, ROAS
+            st.markdown("#### Overview Metrics")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                create_kpi_metric("Total Budget Spent", total_cost_filtered, "currency")
+            with col2:
+                create_kpi_metric("Total Revenue Generated", total_revenue_filtered, "currency")
+            with col3:
+                create_kpi_metric("Overall ROAS", overall_roas_filtered, "decimal")
 
-        with col1:
-            create_kpi_metric("Total Reach", total_reach, "integer")
-        with col2:
-            create_kpi_metric("Total DPV", total_dpv, "integer")
-        with col3:
-            create_kpi_metric("Overall CPDPV", total_cpdpv, "currency")
+            # Row 2: Reach, DPV, CPDPV
+            st.markdown("#### Awareness & Engagement")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                create_kpi_metric("Total Reach", total_reach_filtered, "integer")
+            with col2:
+                create_kpi_metric("Total DPV", total_dpv_filtered, "integer")
+            with col3:
+                create_kpi_metric("Overall CPDPV", avg_cpdpv_filtered, "currency")
 
-        # Row 3: Purchases, Conversion Rate, ROAS (detailed)
-        st.markdown("#### Purchase Performance")
-        col1, col2, col3 = st.columns(3)
+            # Row 3: Purchases, Conversion Rate, ROAS (detailed)
+            st.markdown("#### Purchase Performance")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                create_kpi_metric("Total Purchases", total_purchases_filtered, "integer")
+            with col2:
+                create_kpi_metric("Conversion Rate", conversion_rate_filtered, "percentage")
+            with col3:
+                create_kpi_metric("Purchase ROAS", purchase_roas_filtered, "decimal")
 
-        total_purchases = df['PURCHASES'].sum() if 'PURCHASES' in df.columns else 0
-        conversion_rate = (total_purchases / total_dpv * 100) if total_dpv > 0 else 0
-        purchase_roas = total_revenue / total_cost if total_cost > 0 else 0
-
-        with col1:
-            create_kpi_metric("Total Purchases", total_purchases, "integer")
-        with col2:
-            create_kpi_metric("Conversion Rate", conversion_rate, "percentage")
-        with col3:
-            create_kpi_metric("Purchase ROAS", purchase_roas, "decimal")
-
-        # Row 4: NTB Purchases, NTB Conversion Rate, NTB ROAS
-        st.markdown("#### NTB Performance")
-        col1, col2, col3 = st.columns(3)
-
-        total_ntb_purchases = df['NTB'].sum() if 'NTB' in df.columns else 0
-        ntb_conversion_rate = (total_ntb_purchases / total_dpv * 100) if total_dpv > 0 else 0
-        ntb_revenue = df['REVENUE NTB'].sum() if 'REVENUE NTB' in df.columns else 0
-        ntb_roas = ntb_revenue / total_cost if total_cost > 0 else 0
-
-        with col1:
-            create_kpi_metric("NTB Purchases", total_ntb_purchases, "integer")
-        with col2:
-            create_kpi_metric("NTB Conversion Rate", ntb_conversion_rate, "percentage")
-        with col3:
-            create_kpi_metric("NTB ROAS", ntb_roas, "decimal")
+            # Row 4: NTB Purchases, NTB Conversion Rate, NTB ROAS
+            st.markdown("#### NTB Performance")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                create_kpi_metric("NTB Purchases", total_ntb_purchases_filtered, "integer")
+            with col2:
+                create_kpi_metric("NTB Conversion Rate", ntb_conversion_rate_filtered, "percentage")
+            with col3:
+                create_kpi_metric("NTB ROAS", ntb_roas_filtered, "decimal")
 
         # Optional: Show table with detailed breakdown
         # st.dataframe(channel_cost[['channel', 'impressions_cost', 'percentage']].rename(
