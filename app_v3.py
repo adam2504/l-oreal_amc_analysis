@@ -637,6 +637,57 @@ def campaign_summary_tab():
             delta=None
         )
 
+    # 100% Stacked Cost by Channel Chart
+    st.subheader("Cost Distribution by Channel")
+
+    if 'channel' in df.columns and 'impressions_cost' in df.columns:
+        # Calculate cost by channel
+        channel_cost = df.groupby('channel')['impressions_cost'].sum().reset_index()
+        channel_cost = channel_cost.sort_values('impressions_cost', ascending=False)
+
+        # Calculate percentages for 100% stacked chart
+        total_cost_all = channel_cost['impressions_cost'].sum()
+        channel_cost['percentage'] = (channel_cost['impressions_cost'] / total_cost_all) * 100
+
+        # Create 100% stacked bar chart
+        fig = go.Figure()
+
+        for idx, row in channel_cost.iterrows():
+            channel = row['channel']
+            percentage = row['percentage']
+
+            # Use defined channel colors, fallback to default colors
+            color = st.session_state.channel_colors.get(channel, DEFAULT_COLORS[idx % len(DEFAULT_COLORS)])
+
+            fig.add_trace(go.Bar(
+                name=f"{channel} ({percentage:.1f}%)",
+                x=['Cost Distribution'],
+                y=[percentage],
+                marker_color=color,
+                showlegend=True,
+                text=f"{percentage:.1f}%",
+                textposition="inside"
+            ))
+
+        fig.update_layout(
+            barmode='stack',
+            title="Channel Cost Distribution (100%)",
+            xaxis_title="",
+            yaxis_title="Percentage",
+            yaxis_range=[0, 100],
+            showlegend=True,
+            height=400
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+        # Optional: Show table with detailed breakdown
+        # st.dataframe(channel_cost[['channel', 'impressions_cost', 'percentage']].rename(
+        #     columns={'channel': 'Channel', 'impressions_cost': 'Total Cost (€)', 'percentage': 'Percentage (%)'}
+        # ), use_container_width=True)
+    else:
+        st.info("No channel data available for cost distribution chart")
+
 def data_table_tab():
     st.header("Data Table & Filters")
 
