@@ -672,9 +672,6 @@ def campaign_summary_tab():
 
         fig.update_layout(
             barmode='stack',
-            xaxis_title="",
-            yaxis_title="",
-            xaxis_range=[0, 100],
             showlegend=True,
             legend=dict(
                 x=0.5,
@@ -1014,31 +1011,15 @@ def create_simple_path_diagram(channels, color_dict):
         paper_bgcolor='white'
     )
 
-    # Configure axes - MASSIVE ranges to fit everything
+    # Completely hide axes - no labels, no ticks, nothing visible
     fig.update_xaxes(
-        range=[x_axis_min, x_axis_max],  # Massive x range to fit all HUGE squares
-        showticklabels=False,
-        showgrid=False,
-        zeroline=False,
-        visible=False
+        visible=False,
+        showgrid=False
     )
 
-    # Special y-axis range for 3 channels to make squares appear BIGGER
-    # For 3 channels, we use [-2.5, 2.5] instead of [-8,8] to zoom in visually
-    # This makes the 6x6 squares (which are actually [-3,+3]) appear much larger on screen
-    if n_channels == 3:
-        y_axis_range = [-3.5, 3.5]  # Zoom in for 3 channels - makes squares WAY bigger
-    else:
-        y_axis_range = [-4, 4]  # Normal zoom for 1,2,4+ channels
-
     fig.update_yaxes(
-        range=y_axis_range,  # Adaptive y range: zoomed in for 3 channels, normal for others
-        showticklabels=False,
-        showgrid=False,
-        zeroline=False,
         visible=False,
-        scaleanchor="x",  # Maintain square aspect ratio
-        scaleratio=1
+        showgrid=False
     )
 
     return fig  # Return complete plotly figure
