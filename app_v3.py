@@ -1031,7 +1031,7 @@ def path_to_conversion_tab():
                 total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
                 total_cost = path_df['COST AMC'].sum() if 'COST AMC' in path_df.columns else 0
                 avg_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
-                ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
+                ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
                 consideration_data.append({
                     'Type de parcours': str(path).replace('[', '').replace(']', ''),
@@ -1042,7 +1042,7 @@ def path_to_conversion_tab():
                 })
 
         if consideration_data:
-            consideration_df = pd.DataFrame(consideration_data).reset_index(drop=True)
+            consideration_df = pd.DataFrame(consideration_data)
 
             # Format the DataFrame for display
             styled_consideration_df = consideration_df.style.format({
@@ -1052,7 +1052,7 @@ def path_to_conversion_tab():
                 'Part de ventes NTB': '{:.1f}%'
             })
 
-            st.dataframe(styled_consideration_df, use_container_width=True)
+            st.dataframe(styled_consideration_df, use_container_width=True, hide_index=True)
 
     # Right side - Conversion Table
     with col2:
@@ -1094,7 +1094,7 @@ def path_to_conversion_tab():
                 'Part de ventes NTB': '{:.1f}%'
             })
 
-            st.dataframe(styled_conversion_df, use_container_width=True)
+            st.dataframe(styled_conversion_df, use_container_width=True, hide_index=True)
 
 
 def create_simple_path_diagram(channels, color_dict):
