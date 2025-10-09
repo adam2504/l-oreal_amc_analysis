@@ -555,10 +555,10 @@ def preprocess_data(df):
         if 'impressions' in df.columns:
             df['CPM'] = df['impressions_cost'] / (df['impressions'] / 1000).replace(0, np.nan)
 
-    if 'details_page_view_clicks' in df.columns:
-        df['DPV'] = df['details_page_view_clicks']
+    if 'detail_page_view_clicks' in df.columns:
+        df['DPV'] = df['detail_page_view_clicks']
         if 'impressions_cost' in df.columns:
-            df['CPDPV'] = df['impressions_cost'] / df['details_page_view_clicks'].replace(0, np.nan)
+            df['CPDPV'] = df['impressions_cost'] / df['detail_page_view_clicks'].replace(0, np.nan)
 
     if 'add_to_cart' in df.columns:
         df['ADD TO CART'] = df['add_to_cart']
@@ -573,8 +573,8 @@ def preprocess_data(df):
     if 'product_sales' in df.columns:
         df['REVENUE'] = df['product_sales']
 
-    if 'purchases' in df.columns and 'details_page_view_clicks' in df.columns:
-        df['CVR'] = df['purchases'] / df['details_page_view_clicks'].replace(0, np.nan)
+    if 'purchases' in df.columns and 'detail_page_view_clicks' in df.columns:
+        df['CVR'] = df['purchases'] / df['detail_page_view_clicks'].replace(0, np.nan)
 
     if 'product_sales' in df.columns and 'impressions_cost' in df.columns:
         df['ROAS'] = df['product_sales'] / df['impressions_cost'].replace(0, np.nan)
@@ -589,8 +589,8 @@ def preprocess_data(df):
     if 'ntb_purchases' in df.columns and 'impressions_cost' in df.columns:
         df['COST PER NTB'] = df['impressions_cost'] / df['ntb_purchases'].replace(0, np.nan)
 
-    if 'ntb_purchases' in df.columns and 'details_page_view_clicks' in df.columns:
-        df['CVR NTB'] = df['ntb_purchases'] / df['details_page_view_clicks'].replace(0, np.nan)
+    if 'ntb_purchases' in df.columns and 'detail_page_view_clicks' in df.columns:
+        df['CVR NTB'] = df['ntb_purchases'] / df['detail_page_view_clicks'].replace(0, np.nan)
 
     if 'ntb_product_sales' in df.columns and 'impressions_cost' in df.columns:
         df['ROAS NTB'] = df['ntb_product_sales'] / df['impressions_cost'].replace(0, np.nan)
@@ -719,8 +719,8 @@ def campaign_summary_tab():
         st.markdown("#### Overview Metrics")
         col1, col2, col3 = st.columns(3)
 
-        total_cost = df['impressions_cost'].sum()
-        total_revenue = df['product_sales'].sum() if 'product_sales' in df.columns else 0
+        total_cost = df['COST AMC'].sum()
+        total_revenue = df['REVENUE'].sum() if 'REVENUE' in df.columns else 0
         overall_roas = total_revenue / total_cost if total_cost > 0 else 0
 
         with col1:
@@ -734,8 +734,8 @@ def campaign_summary_tab():
         st.markdown("#### Awareness & Engagement")
         col1, col2, col3 = st.columns(3)
 
-        total_reach = df['reach'].sum() if 'reach' in df.columns else 0
-        total_dpv = df['details_page_view_clicks'].sum() if 'details_page_view_clicks' in df.columns else 0
+        total_reach = df['REACH'].sum() if 'REACH' in df.columns else 0
+        total_dpv = df['DPV'].sum() if 'DPV' in df.columns else 0
         total_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
 
         with col1:
@@ -749,7 +749,7 @@ def campaign_summary_tab():
         st.markdown("#### Purchase Performance")
         col1, col2, col3 = st.columns(3)
 
-        total_purchases = df['purchases'].sum() if 'purchases' in df.columns else 0
+        total_purchases = df['PURCHASES'].sum() if 'PURCHASES' in df.columns else 0
         conversion_rate = (total_purchases / total_dpv * 100) if total_dpv > 0 else 0
         purchase_roas = total_revenue / total_cost if total_cost > 0 else 0
 
@@ -764,9 +764,9 @@ def campaign_summary_tab():
         st.markdown("#### NTB Performance")
         col1, col2, col3 = st.columns(3)
 
-        total_ntb_purchases = df['ntb_purchases'].sum() if 'ntb_purchases' in df.columns else 0
+        total_ntb_purchases = df['NTB'].sum() if 'NTB' in df.columns else 0
         ntb_conversion_rate = (total_ntb_purchases / total_dpv * 100) if total_dpv > 0 else 0
-        ntb_revenue = df['ntb_product_sales'].sum() if 'ntb_product_sales' in df.columns else 0
+        ntb_revenue = df['REVENUE NTB'].sum() if 'REVENUE NTB' in df.columns else 0
         ntb_roas = ntb_revenue / total_cost if total_cost > 0 else 0
 
         with col1:
@@ -1255,7 +1255,7 @@ def documentation_tab():
         "CTR": "Formula: clicks / impressions",
         "CPM": "Formula: impression_cost / (impressions/1000)",
         "COST AMC": "Column: 'impression_cost'",
-        "DPV": "Column: 'details_page_view_clicks'",
+        "DPV": "Column: 'detail_page_view_clicks'",
         "CPDPV": "Formula: COST AMC / DPV",
         "ADD TO CART": "Column: 'add_to_cart'"
     }
