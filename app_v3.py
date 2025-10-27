@@ -9,6 +9,37 @@ import numpy as np
 import time
 
 # Utility functions
+def format_number_for_sortable_copy(value, format_type="default", padding_width=10):
+    """
+    Format numbers for both copy-paste and approximate numeric sorting.
+    Uses padding to make alphabetical sorting work like numeric sorting.
+
+    Examples:
+    - format_number_for_sortable_copy(9.5, "currency") -> "0000009.50000000000" (but displayed as "9.50 €")
+    - format_number_for_sortable_copy(123.45, "percentage") -> "00000123.4500000000" (but displayed as "123.45%")
+    """
+    if pd.isna(value) or value == 0:
+        return "0" + "0" * (padding_width - 1)
+
+    if format_type == "currency":
+        # Format euros with 2 decimals
+        formatted = f"{value:,.2f}".replace('.', '').replace(',', '').replace(' ', '')
+        return formatted.zfill(padding_width)
+    elif format_type == "percentage":
+        # Format percentage with 1 decimal
+        formatted = f"{value:.1f}".replace('.', '')
+        return formatted.zfill(padding_width)
+    elif format_type == "decimal":
+        # Format with 2 decimals
+        formatted = f"{value:.2f}".replace('.', '')
+        return formatted.zfill(padding_width)
+    elif format_type == "integer":
+        # Format as integer with thousands separator removed
+        formatted = f"{value:,.0f}".replace(',', '').replace(' ', '')
+        return formatted.zfill(padding_width)
+    else:
+        return str(value).zfill(padding_width)
+
 def extract_path_channels(df):
     """Extract unique path channels from the data."""
     path_channels = set()
@@ -1040,7 +1071,7 @@ def path_to_conversion_tab():
     # Sorting and display controls
     display_df = display_sorting_controls(filtered_df, "path_to_conversion")
 
-    # Add derived columns for NTB percentage
+    # Add derived columns for NTB percentage with proper formatting for copy-paste
     if 'NTB' in display_df.columns and 'PURCHASES' in display_df.columns:
         display_df = display_df.assign(
             **{'Part de ventes NTB (%)': (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)}
@@ -1049,14 +1080,14 @@ def path_to_conversion_tab():
     # Extract unique paths for consideration table
     consideration_paths = display_df['path'].dropna().unique()
 
-    # Create two columns layout for the visual tables
+    # Create two columns layout for the dataframes
     col1, col2 = st.columns(2)
 
     # Left side - Consideration Table
     with col1:
         st.subheader("🔍 Considération")
 
-        # Prepare consideration table data
+        # Prepare consideration table data with numeric values for sorting
         consideration_data = []
         for path in consideration_paths:
             path_df = filtered_df[filtered_df['path'] == path]
@@ -1070,39 +1101,48 @@ def path_to_conversion_tab():
 
                 consideration_data.append({
                     'Type de parcours': format_path_channels(path),
-                    'CPDPV post clic': avg_cpdpv,
-                    'Reach': total_reach,
-                    'Nb pages vues': total_dpv,
-                    'Part de ventes NTB': ntb_percentage
+                    'CPDPV post clic (€)': avg_cpdpv,  # Numeric for perfect sorting
+                    'Reach': total_reach,  # Numeric for perfect sorting
+                    'Nb pages vues': total_dpv,  # Numeric for perfect sorting
+                    'Part de ventes NTB (%)': ntb_percentage  # Numeric for perfect sorting
                 })
 
         if consideration_data:
             consideration_df = pd.DataFrame(consideration_data)
 
-            # Column configuration: Type de parcours adapts to content, others to title length
+            # Configure columns with perfect numeric sorting (copy-paste gives formatted values)
             column_config = {
-                "Type de parcours": st.column_config.Column(width="auto"),
-                "CPDPV post clic": st.column_config.Column(width=120),  # Longer title
-                "Reach": st.column_config.Column(width="small"),  # Short title
-                "Nb pages vues": st.column_config.Column(width=120),  # Medium title
-                "Part de ventes NTB": st.column_config.Column(width=130)  # Long title
+                "Type de parcours": st.column_config.TextColumn("Type de parcours", width="auto"),
+                "CPDPV post clic (€)": st.column_config.NumberColumn(
+                    "CPDPV post clic (€)",
+                    format="%.2f",
+                    width=140
+                ),
+                "Reach": st.column_config.NumberColumn(
+                    "Reach",
+                    format="%.0f",
+                    width="medium"
+                ),
+                "Nb pages vues": st.column_config.NumberColumn(
+                    "Nb pages vues",
+                    format="%.0f",
+                    width=120
+                ),
+                "Part de ventes NTB (%)": st.column_config.NumberColumn(
+                    "Part de ventes NTB (%)",
+                    format="%.1f",
+                    width=140
+                )
             }
 
-            # Format the DataFrame for display
-            styled_consideration_df = consideration_df.style.format({
-                'CPDPV post clic': '{:.2f}€',
-                'Reach': '{:,.0f}',
-                'Nb pages vues': '{:,.0f}',
-                'Part de ventes NTB': '{:.1f}%'
-            })
-
-            st.dataframe(styled_consideration_df, column_config=column_config, width='content', hide_index=True)
+            # Display dataframe with proper formatting and sorting
+            st.dataframe(consideration_df, column_config=column_config, use_container_width=False, hide_index=True)
 
     # Right side - Conversion Table
     with col2:
         st.subheader("🎯 Conversion")
 
-        # Prepare conversion table data
+        # Prepare conversion table data with numeric values for sorting
         conversion_data = []
         for path in consideration_paths:
             path_df = filtered_df[filtered_df['path'] == path]
@@ -1121,33 +1161,42 @@ def path_to_conversion_tab():
 
                 conversion_data.append({
                     'Type de parcours': format_path_channels(path),
-                    'Taux de conversion': conversion_rate,
-                    'ROAS': roas,
-                    'Nombre de conversions': total_purchases,
-                    'Part de ventes NTB': ntb_percentage
+                    'Taux de conversion (%)': conversion_rate,  # Numeric for sorting
+                    'ROAS': roas,  # Numeric for sorting
+                    'Nombre de conversions': total_purchases,  # Numeric for sorting
+                    'Part de ventes NTB (%)': ntb_percentage  # Numeric for sorting
                 })
 
         if conversion_data:
             conversion_df = pd.DataFrame(conversion_data)
 
-            # Column configuration: Type de parcours adapts to content, others to title length
+            # Configure columns with proper formatting and copy-paste
             column_config = {
-                "Type de parcours": st.column_config.Column(width="auto"),
-                "Taux de conversion": st.column_config.Column(width=150),  # Longer title
-                "ROAS": st.column_config.Column(width="small"),  # Short title
-                "Nombre de conversions": st.column_config.Column(width=150),  # Long title
-                "Part de ventes NTB": st.column_config.Column(width=130)  # Long title
+                "Type de parcours": st.column_config.TextColumn("Type de parcours", width="auto"),
+                "Taux de conversion (%)": st.column_config.NumberColumn(
+                    "Taux de conversion",
+                    format="%.2f%%",
+                    width=150
+                ),
+                "ROAS": st.column_config.NumberColumn(
+                    "ROAS",
+                    format="%.2f",
+                    width="medium"
+                ),
+                "Nombre de conversions": st.column_config.NumberColumn(
+                    "Nombre de conversions",
+                    format="%d",
+                    width=160
+                ),
+                "Part de ventes NTB (%)": st.column_config.NumberColumn(
+                    "Part de ventes NTB",
+                    format="%.1f%%",
+                    width=140
+                )
             }
 
-            # Format the DataFrame for display
-            styled_conversion_df = conversion_df.style.format({
-                'Taux de conversion': '{:.2f}%',
-                'ROAS': '{:.2f}',
-                'Nombre de conversions': '{:,.0f}',
-                'Part de ventes NTB': '{:.1f}%'
-            })
-
-            st.dataframe(styled_conversion_df, column_config=column_config, width='content', hide_index=True)
+            # Display dataframe with proper formatting and sorting
+            st.dataframe(conversion_df, column_config=column_config, use_container_width=False, hide_index=True)
 
 
 def create_simple_path_diagram(channels, color_dict):

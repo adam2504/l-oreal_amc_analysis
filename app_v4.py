@@ -312,7 +312,7 @@ def apply_video_filter(df, has_video):
     return df_filtered
 
 # Configure page
-st.set_page_config(page_title="AMC Analytics L'Oréal v3", page_icon="📊", layout="wide")
+st.set_page_config(page_title="AMC Analytics L'Oréal v4", page_icon="📊", layout="wide")
 
 # Initialize session state
 if 'data' not in st.session_state:
@@ -329,7 +329,7 @@ DEFAULT_COLORS = [
 ]
 
 def main():
-    st.title("📊 AMC Analytics L'Oréal v3")
+    st.title("📊 AMC Analytics L'Oréal v4")
 
     # Tab layout
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📁 Data Upload", "📈 Campaign Summary", "📋 Data Workspace", "📊 Media Mix", "🔀 Path to Conversion", "📖 Documentation"])
