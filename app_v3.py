@@ -1136,7 +1136,7 @@ def path_to_conversion_tab():
             }
 
             # Display dataframe with proper formatting and sorting
-            st.dataframe(consideration_df, column_config=column_config, use_container_width=False, hide_index=True)
+            st.dataframe(consideration_df, column_config=column_config, width='content', hide_index=True)
 
     # Right side - Conversion Table
     with col2:
@@ -1196,7 +1196,7 @@ def path_to_conversion_tab():
             }
 
             # Display dataframe with proper formatting and sorting
-            st.dataframe(conversion_df, column_config=column_config, use_container_width=False, hide_index=True)
+            st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
 
 def create_simple_path_diagram(channels, color_dict):
