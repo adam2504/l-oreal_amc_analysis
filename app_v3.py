@@ -336,24 +336,38 @@ def display_channel_color_pickers(key_prefix=""):
     num_channels = len(st.session_state.channel_colors)
 
     if num_channels > 0:
+        # Track if colors have been modified
+        if f"{key_prefix}_colors_changed" not in st.session_state:
+            st.session_state[f"{key_prefix}_colors_changed"] = False
+
         # Create appropriate number of columns based on number of channels
         num_cols = max(1, min(4, num_channels))
         color_cols = st.columns(num_cols)
 
-        # Store current colors
+        # Store current colors from session state
         current_colors = st.session_state.channel_colors.copy()
+        initial_colors = st.session_state.channel_colors.copy()
 
+        colors_modified = False
         for i, (channel, color) in enumerate(current_colors.items()):
             col_idx = i % num_cols
             with color_cols[col_idx]:
                 new_color = st.color_picker(f"{channel}", color, key=f"{key_prefix}color_{channel}")
                 current_colors[channel] = new_color
+                if new_color != initial_colors[channel]:
+                    colors_modified = True
 
-        # Change color button
+        # Change color button - only show if colors have been modified
+        if colors_modified and not st.session_state[f"{key_prefix}_colors_changed"]:
+            st.warning("⚠️ Vous avez modifié des couleurs. Cliquez sur **'🎨 Changer Couleur'** ci-dessous pour appliquer les changements.")
+        elif st.session_state[f"{key_prefix}_colors_changed"]:
+            st.success("✅ Couleurs appliquées!")
+
         change_color_col = st.columns([1, 3])[0]  # Single column for button alignment
         with change_color_col:
             if st.button("🎨 Changer Couleur", key=f"{key_prefix}change_color_button"):
                 st.session_state.channel_colors = current_colors.copy()
+                st.session_state[f"{key_prefix}_colors_changed"] = True
                 st.success("✅ Couleurs mises à jour!")
                 st.rerun()  # Force rerun to update all charts using these colors
     else:
