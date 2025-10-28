@@ -336,10 +336,6 @@ def display_channel_color_pickers(key_prefix=""):
     num_channels = len(st.session_state.channel_colors)
 
     if num_channels > 0:
-        # Track if colors have been modified
-        if f"{key_prefix}_colors_changed" not in st.session_state:
-            st.session_state[f"{key_prefix}_colors_changed"] = False
-
         # Create appropriate number of columns based on number of channels
         num_cols = max(1, min(4, num_channels))
         color_cols = st.columns(num_cols)
@@ -357,18 +353,29 @@ def display_channel_color_pickers(key_prefix=""):
                 if new_color != initial_colors[channel]:
                     colors_modified = True
 
-        # Change color button - only show if colors have been modified
-        if colors_modified and not st.session_state[f"{key_prefix}_colors_changed"]:
+        # Track last application time for temporary messages
+        current_time = time.time()
+        if f"{key_prefix}_last_applied" not in st.session_state:
+            st.session_state[f"{key_prefix}_last_applied"] = 0
+
+        # Show success message temporarily (3 seconds) after applying colors
+        if current_time - st.session_state[f"{key_prefix}_last_applied"] < 3:
+            st.success("✅ Couleurs mises à jour!")
+
+        # Show warning if colors are modified but not the current session state
+        if not colors_modified and st.session_state.get(f"{key_prefix}_pending_changes", False):
+            # Reset pending changes flag when colors are back to saved state
+            st.session_state[f"{key_prefix}_pending_changes"] = False
+        elif colors_modified:
+            st.session_state[f"{key_prefix}_pending_changes"] = True
             st.warning("⚠️ Vous avez modifié des couleurs. Cliquez sur **'🎨 Changer Couleur'** ci-dessous pour appliquer les changements.")
-        elif st.session_state[f"{key_prefix}_colors_changed"]:
-            st.success("✅ Couleurs appliquées!")
 
         change_color_col = st.columns([1, 3])[0]  # Single column for button alignment
         with change_color_col:
             if st.button("🎨 Changer Couleur", key=f"{key_prefix}change_color_button"):
                 st.session_state.channel_colors = current_colors.copy()
-                st.session_state[f"{key_prefix}_colors_changed"] = True
-                st.success("✅ Couleurs mises à jour!")
+                st.session_state[f"{key_prefix}_last_applied"] = time.time()
+                st.session_state[f"{key_prefix}_pending_changes"] = False
                 st.rerun()  # Force rerun to update all charts using these colors
     else:
         st.info("💡 Upload data to see channel color options")
