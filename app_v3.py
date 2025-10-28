@@ -775,8 +775,8 @@ def campaign_summary_tab():
                 yanchor='top',
                 orientation='h'
             ),
-            height=400,
-            width=600
+            height=300,
+            width=800
         )
 
         st.plotly_chart(fig)
@@ -934,6 +934,140 @@ def campaign_summary_tab():
                 create_kpi_metric("NTB Conversion Rate", ntb_conversion_rate_filtered, "percentage")
             with col3:
                 create_kpi_metric("NTB ROAS", ntb_roas_filtered, "decimal")
+
+        # Export KPIs section
+        st.markdown("---")
+        st.subheader("📊 Export Key Campaign Metrics")
+
+        # Create dataframe with KPI data for export
+        kpi_data = {
+            'Metric': [
+                'Total Budget Spent',
+                'Total Revenue Generated',
+                'Overall ROAS',
+                'Total Reach',
+                'Total DPV',
+                'Overall CPDPV',
+                'Total Purchases',
+                'Conversion Rate',
+                'Purchase ROAS',
+                'NTB Purchases',
+                'NTB Conversion Rate',
+                'NTB ROAS'
+            ],
+            'Value': [
+                total_cost_filtered,
+                total_revenue_filtered,
+                overall_roas_filtered,
+                total_reach_filtered,
+                total_dpv_filtered,
+                avg_cpdpv_filtered,
+                total_purchases_filtered,
+                conversion_rate_filtered,
+                purchase_roas_filtered,
+                total_ntb_purchases_filtered,
+                ntb_conversion_rate_filtered,
+                ntb_roas_filtered
+            ],
+            'Unit': [
+                '€',
+                '€',
+                '',
+                '',
+                '',
+                '€',
+                '',
+                '%',
+                '',
+                '',
+                '%',
+                ''
+            ],
+            'Category': [
+                'Budget',
+                'Revenue',
+                'ROAS',
+                'Awareness',
+                'Engagement',
+                'Efficiency',
+                'Performance',
+                'Rate',
+                'ROAS',
+                'NTB',
+                'NTB Rate',
+                'NTB ROAS'
+            ]
+        }
+
+        kpi_export_df = pd.DataFrame(kpi_data)
+
+        # Display toggle to show/hide KPI table
+        show_kpi_table = st.checkbox("Show KPI Table", key="show_kpi_export_table")
+
+        if show_kpi_table:
+            # Style the dataframe
+            def highlight_categories(row):
+                if row['Category'] == 'Budget':
+                    return ['background-color: #e3f2fd'] * len(row)
+                elif row['Category'] == 'Revenue':
+                    return ['background-color: #f3e5f5'] * len(row)
+                elif row['Category'] == 'ROAS':
+                    return ['background-color: #e8f5e8'] * len(row)
+                elif row['Category'] == 'Awareness':
+                    return ['background-color: #fff3e0'] * len(row)
+                elif row['Category'] == 'Engagement':
+                    return ['background-color: #fce4ec'] * len(row)
+                elif row['Category'] == 'Efficiency':
+                    return ['background-color: #f1f8e9'] * len(row)
+                elif 'Performance' in row['Category']:
+                    return ['background-color: #e0f2f1'] * len(row)
+                elif 'NTB' in row['Category']:
+                    return ['background-color: #f3e5f5'] * len(row)
+                elif 'Rate' in row['Category']:
+                    return ['background-color: #fce4ec'] * len(row)
+                else:
+                    return [''] * len(row)
+
+            styled_kpi_df = kpi_export_df.style.apply(highlight_categories, axis=1)
+
+            st.dataframe(
+                styled_kpi_df,
+                column_config={
+                    "Metric": st.column_config.TextColumn("Metric", width=200),
+                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
+                    "Unit": st.column_config.TextColumn("Unit", width=50),
+                    "Category": st.column_config.TextColumn("Category", width=100)
+                },
+                use_container_width=True,
+                hide_index=True
+            )
+
+        # Export buttons
+        col_exp1, col_exp2 = st.columns(2)
+
+        with col_exp1:
+            csv_kpi_data = kpi_export_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download KPIs CSV",
+                data=csv_kpi_data,
+                file_name=f"kpi_metrics_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_kpi_csv_campaign_summary"
+            )
+
+        with col_exp2:
+            import io
+            kpi_buffer = io.BytesIO()
+            kpi_export_df.to_excel(kpi_buffer, index=False, engine='openpyxl')
+            kpi_excel_data = kpi_buffer.getvalue()
+
+            st.download_button(
+                label="📥 Download KPIs Excel",
+                data=kpi_excel_data,
+                file_name=f"kpi_metrics_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_kpi_excel_campaign_summary"
+            )
 
         # Optional: Show table with detailed breakdown
         # st.dataframe(channel_cost[['channel', 'impressions_cost', 'percentage']].rename(
