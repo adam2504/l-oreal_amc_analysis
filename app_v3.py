@@ -1138,7 +1138,7 @@ def media_mix_tab():
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
     # Generate plots button
-    generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
+    generate_plots = st.button("📊 Generate Overlap Charts", key="generate_plots_media_mix")
 
     # Display plots if generated
     if generate_plots:
@@ -1313,7 +1313,7 @@ def path_to_conversion_tab():
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
     # Generate path charts button under the two tables
-    generate_path_charts = st.button("📊 Generate Path Charts", key="generate_path_charts")
+    generate_path_charts = st.button("📊 Generate Path to Conversion Charts", key="generate_path_charts")
 
     if generate_path_charts:
         st.subheader("📊 Path Charts for Each Path")
