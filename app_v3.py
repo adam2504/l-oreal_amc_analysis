@@ -1198,6 +1198,26 @@ def path_to_conversion_tab():
             # Display dataframe with proper formatting and sorting
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
+    # Generate path charts button under the two tables
+    generate_path_charts = st.button("📊 Generate Path Charts", key="generate_path_charts")
+
+    if generate_path_charts:
+        st.subheader("📊 Path Charts for Each Path")
+        st.info(f"Displaying simple path diagrams for the {len(consideration_paths)} paths shown above")
+
+        for path in consideration_paths:
+            formatted_path = format_path_channels(path)
+            with st.expander(f"📈 Diagram for Path: {formatted_path}", expanded=False):
+                try:
+                    matches = re.findall(r'/([A-Z\s]+)', str(path).upper())
+                    unique_channels = list(dict.fromkeys(matches))
+                    fig = create_simple_path_diagram(unique_channels, st.session_state.channel_colors)
+                except Exception as e:
+                    fig = go.Figure(data=[go.Bar(x=['DEBUG ERROR'], y=[1])])
+                    fig.update_layout(title=f"Error: {str(e)[:100]}", height=300)
+
+                st.plotly_chart(fig, config={'responsive': True, 'displayModeBar': False}, key=f"path_chart_{hash(path)}")
+
 
 def create_simple_path_diagram(channels, color_dict):
     """
