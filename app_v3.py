@@ -340,12 +340,22 @@ def display_channel_color_pickers(key_prefix=""):
         num_cols = max(1, min(4, num_channels))
         color_cols = st.columns(num_cols)
 
-        for i, (channel, color) in enumerate(st.session_state.channel_colors.items()):
+        # Store current colors
+        current_colors = st.session_state.channel_colors.copy()
+
+        for i, (channel, color) in enumerate(current_colors.items()):
             col_idx = i % num_cols
             with color_cols[col_idx]:
                 new_color = st.color_picker(f"{channel}", color, key=f"{key_prefix}color_{channel}")
-                if new_color != color:
-                    st.session_state.channel_colors[channel] = new_color
+                current_colors[channel] = new_color
+
+        # Change color button
+        change_color_col = st.columns([1, 3])[0]  # Single column for button alignment
+        with change_color_col:
+            if st.button("🎨 Changer Couleur", key=f"{key_prefix}change_color_button"):
+                st.session_state.channel_colors = current_colors.copy()
+                st.success("✅ Couleurs mises à jour!")
+                st.rerun()  # Force rerun to update all charts using these colors
     else:
         st.info("💡 Upload data to see channel color options")
 
