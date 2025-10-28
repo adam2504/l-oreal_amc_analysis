@@ -1166,6 +1166,68 @@ def media_mix_tab():
     # Fixed analysis level
     analysis_level_filter = 'Media Mix'
 
+    # Calculate channel reach for overlap diagram (always displayed at top)
+    # Use base criteria: granularity = "Format", brand = "MULTI" (case sensitive)
+    base_criteria_df = df[
+        (df['analysis_level'] == analysis_level_filter) &
+        (df['granularity'] == "Format") &
+        (df['brand'] == "MULTI")  # Case sensitive match
+    ].copy() if 'analysis_level' in df.columns and 'granularity' in df.columns and 'brand' in df.columns else pd.DataFrame()
+
+    channel_reach_data = []
+    if not base_criteria_df.empty:
+        # Calculate total reach for each channel
+        for channel in df['channel'].dropna().unique():
+            # Filter rows that include this channel in their path
+            channel_rows = base_criteria_df[base_criteria_df['path'].str.contains(channel, case=False, na=False)]
+            total_reach = channel_rows['reach'].sum() if 'reach' in channel_rows.columns else 0
+
+            if total_reach > 0:
+                channel_reach_data.append({
+                    'channel': channel,
+                    'total_reach': total_reach
+                })
+
+        # Sort by reach and select top 4 if more than 4 channels
+        channel_reach_df = pd.DataFrame(channel_reach_data)
+
+        if not channel_reach_df.empty:
+            channel_reach_df = channel_reach_df.sort_values('total_reach', ascending=False)
+
+            # Get top 4 channels or all if less than 4
+            selected_channels = channel_reach_df.head(min(4, len(channel_reach_df)))['channel'].tolist()
+
+            if selected_channels:
+                st.subheader("📊 Channel Reach Overlap")
+
+                # Create and display Venn diagram
+                try:
+                    fig = create_venn_diagram(selected_channels, st.session_state.channel_colors)
+                    st.plotly_chart(fig, config={'responsive': True, 'displayModeBar': False}, key="media_mix_overlap_diagram")
+
+                    # Add legend with reach values
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        for channel_data in channel_reach_df.head(len(selected_channels)).itertuples():
+                            color = st.session_state.channel_colors.get(channel_data.channel, '#666666')
+                            st.markdown(f"""
+                            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                                <div style="width: 12px; height: 12px; background-color: {color}; border-radius: 50%; margin-right: 8px;"></div>
+                                <span style="font-weight: bold;">{channel_data.channel}</span>
+                                <span style="margin-left: 8px; color: #666;">({channel_data.total_reach:,.0f} reach)</span>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                    with col2:
+                        st.caption("Total reach per channel (Granularity: Format, Brand: Multi)")
+
+                except Exception as e:
+                    st.error(f"Could not create overlap diagram: {str(e)}")
+                    st.code(f"Channels: {selected_channels}")
+                    import traceback
+                    st.code(traceback.format_exc())
+
     # Get filters
     filters = display_filters(df, path_channels, analysis_level_filter, "media_mix")
 
