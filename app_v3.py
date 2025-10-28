@@ -1001,10 +1001,6 @@ def media_mix_tab():
     # Fixed analysis level
     analysis_level_filter = 'Media Mix'
 
-    # Show quick stats for filtered data
-    filtered_df_for_stats = df[df['analysis_level'] == analysis_level_filter]
-    display_quick_stats(filtered_df_for_stats, "media_mix")
-
     # Get filters
     filters = display_filters(df, path_channels, analysis_level_filter, "media_mix")
 
@@ -1014,17 +1010,135 @@ def media_mix_tab():
     # Sorting and display controls
     display_df = display_sorting_controls(filtered_df, "media_mix")
 
-    # Display table
-    display_styled_table(display_df, "media_mix")
+    # Add derived columns for NTB percentage with proper formatting for copy-paste
+    if 'NTB' in display_df.columns and 'PURCHASES' in display_df.columns:
+        display_df = display_df.assign(
+            **{'Part de ventes NTB (%)': (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)}
+        )
 
-    # Export controls
-    display_export_controls(display_df, "media_mix", default_all=False)
+    # Extract unique paths for consideration table
+    consideration_paths = display_df['path'].dropna().unique()
+
+    # Create two columns layout for the dataframes
+    col1, col2 = st.columns(2)
+
+    # Left side - Consideration Table
+    with col1:
+        st.subheader("🔍 Considération")
+
+        # Prepare consideration table data with numeric values for sorting
+        consideration_data = []
+        for path in consideration_paths:
+            path_df = filtered_df[filtered_df['path'] == path]
+            if len(path_df) > 0:
+                # Calculate aggregated metrics
+                total_reach = path_df['REACH'].sum() if 'REACH' in path_df.columns else 0
+                total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
+                total_cost = path_df['COST AMC'].sum() if 'COST AMC' in path_df.columns else 0
+                avg_cpdpv = total_cost / total_dpv if total_dpv > 0 else 0
+                ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
+
+                consideration_data.append({
+                    'Type de parcours': format_path_channels(path),
+                    'CPDPV post clic (€)': avg_cpdpv,  # Numeric for perfect sorting
+                    'Reach': total_reach,  # Numeric for perfect sorting
+                    'Nb pages vues': total_dpv,  # Numeric for perfect sorting
+                    'Part de ventes NTB (%)': ntb_percentage  # Numeric for perfect sorting
+                })
+
+        if consideration_data:
+            consideration_df = pd.DataFrame(consideration_data)
+
+            # Configure columns with perfect numeric sorting (copy-paste gives formatted values)
+            column_config = {
+                "Type de parcours": st.column_config.TextColumn("Type de parcours", width="auto"),
+                "CPDPV post clic (€)": st.column_config.NumberColumn(
+                    "CPDPV post clic (€)",
+                    format="%.2f",
+                    width=140
+                ),
+                "Reach": st.column_config.NumberColumn(
+                    "Reach",
+                    format="%.0f",
+                    width="medium"
+                ),
+                "Nb pages vues": st.column_config.NumberColumn(
+                    "Nb pages vues",
+                    format="%.0f",
+                    width=120
+                ),
+                "Part de ventes NTB (%)": st.column_config.NumberColumn(
+                    "Part de ventes NTB (%)",
+                    format="%.1f",
+                    width=140
+                )
+            }
+
+            # Display dataframe with proper formatting and sorting
+            st.dataframe(consideration_df, column_config=column_config, width='content', hide_index=True)
+
+    # Right side - Conversion Table
+    with col2:
+        st.subheader("🎯 Conversion")
+
+        # Prepare conversion table data with numeric values for sorting
+        conversion_data = []
+        for path in consideration_paths:
+            path_df = filtered_df[filtered_df['path'] == path]
+            if len(path_df) > 0:
+                # Calculate aggregated metrics
+                total_purchases = path_df['PURCHASES'].sum() if 'PURCHASES' in path_df.columns else 0
+                total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
+                conversion_rate = (total_purchases / total_dpv * 100) if total_dpv > 0 else 0
+
+                # Calculate ROAS
+                total_cost = path_df['COST AMC'].sum() if 'COST AMC' in path_df.columns else 0
+                total_revenue = path_df['REVENUE'].sum() if 'REVENUE' in path_df.columns else 0
+                roas = total_revenue / total_cost if total_cost > 0 else 0
+
+                ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
+
+                conversion_data.append({
+                    'Type de parcours': format_path_channels(path),
+                    'Taux de conversion (%)': conversion_rate,  # Numeric for sorting
+                    'ROAS': roas,  # Numeric for sorting
+                    'Nombre de conversions': total_purchases,  # Numeric for sorting
+                    'Part de ventes NTB (%)': ntb_percentage  # Numeric for sorting
+                })
+
+        if conversion_data:
+            conversion_df = pd.DataFrame(conversion_data)
+
+            # Configure columns with proper formatting and copy-paste
+            column_config = {
+                "Type de parcours": st.column_config.TextColumn("Type de parcours", width="auto"),
+                "Taux de conversion (%)": st.column_config.NumberColumn(
+                    "Taux de conversion",
+                    format="%.2f%%",
+                    width=150
+                ),
+                "ROAS": st.column_config.NumberColumn(
+                    "ROAS",
+                    format="%.2f",
+                    width="medium"
+                ),
+                "Nombre de conversions": st.column_config.NumberColumn(
+                    "Nombre de conversions",
+                    format="%d",
+                    width=160
+                ),
+                "Part de ventes NTB (%)": st.column_config.NumberColumn(
+                    "Part de ventes NTB (%)",
+                    format="%.1f%%",
+                    width=140
+                )
+            }
+
+            # Display dataframe with proper formatting and sorting
+            st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
     # Generate plots button
     generate_plots = st.button("📊 Generate Charts for Each Row", key="generate_plots_media_mix")
-
-    # Channel color pickers
-    display_channel_color_pickers("media_mix")
 
     # Display plots if generated
     if generate_plots:
