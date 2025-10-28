@@ -1205,17 +1205,21 @@ def media_mix_tab():
                     fig = create_venn_diagram(selected_channels, st.session_state.channel_colors)
                     st.plotly_chart(fig, config={'responsive': True, 'displayModeBar': False}, key="media_mix_overlap_diagram")
 
-                    # Add legend with reach values
+                    # Calculate total reach for percentage calculation
+                    total_reach_all_selected = channel_reach_df.head(len(selected_channels))['total_reach'].sum()
+
+                    # Add legend with reach values and percentages
                     col1, col2 = st.columns(2)
 
                     with col1:
                         for channel_data in channel_reach_df.head(len(selected_channels)).itertuples():
                             color = st.session_state.channel_colors.get(channel_data.channel, '#666666')
+                            percentage = (channel_data.total_reach / total_reach_all_selected * 100) if total_reach_all_selected > 0 else 0
                             st.markdown(f"""
                             <div style="display: flex; align-items: center; margin-bottom: 5px;">
                                 <div style="width: 12px; height: 12px; background-color: {color}; border-radius: 50%; margin-right: 8px;"></div>
                                 <span style="font-weight: bold;">{channel_data.channel}</span>
-                                <span style="margin-left: 8px; color: #666;">({channel_data.total_reach:,.0f} reach)</span>
+                                <span style="margin-left: 8px; color: #666;">({channel_data.total_reach:,.0f} reach, {percentage:.1f}%)</span>
                             </div>
                             """, unsafe_allow_html=True)
 
