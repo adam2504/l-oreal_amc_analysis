@@ -1208,11 +1208,7 @@ def media_mix_tab():
                     # Calculate total reach for percentage calculation
                     total_reach_all_selected = channel_reach_df.head(len(selected_channels))['total_reach'].sum()
 
-                    # Add legend with reach values and percentages
-                    col1, col2 = st.columns(2)
-
-                    with col1:
-                        for channel_data in channel_reach_df.head(len(selected_channels)).itertuples():
+                    for channel_data in channel_reach_df.head(len(selected_channels)).itertuples():
                             color = st.session_state.channel_colors.get(channel_data.channel, '#666666')
                             percentage = (channel_data.total_reach / total_reach_all_selected * 100) if total_reach_all_selected > 0 else 0
                             st.markdown(f"""
@@ -1222,9 +1218,6 @@ def media_mix_tab():
                                 <span style="margin-left: 8px; color: #666;">({channel_data.total_reach:,.0f} reach, {percentage:.1f}%)</span>
                             </div>
                             """, unsafe_allow_html=True)
-
-                    with col2:
-                        st.caption("Total reach per channel (Granularity: Format, Brand: Multi)")
 
                 except Exception as e:
                     st.error(f"Could not create overlap diagram: {str(e)}")
