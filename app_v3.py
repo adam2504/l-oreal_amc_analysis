@@ -1545,20 +1545,19 @@ def path_to_conversion_tab():
             # Display dataframe with proper formatting and sorting
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
-    # PowerPoint Export section
+    # PowerPoint Export
     if not consideration_df.empty and not conversion_df.empty:
-        col_export1, col_export2 = st.columns([1, 3])
-        with col_export1:
-            if st.button("📄 Export to PowerPoint", key="ppt_export_path_conversion"):
-                with st.spinner("Generating PowerPoint presentation..."):
-                    ppt_buffer = export_tables_to_ppt(consideration_df, conversion_df, "Path to Conversion")
-                    st.download_button(
-                        label="📥 Download Path to Conversion Presentation",
-                        data=ppt_buffer,
-                        file_name=f"path_to_conversion_analysis_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pptx",
-                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                        key="ppt_download_path_conversion"
-                    )
+        if st.button("📄 Export to PowerPoint", key="ppt_export_path_conversion"):
+            with st.spinner("Generating PowerPoint presentation..."):
+                ppt_buffer = export_tables_to_ppt(consideration_df, conversion_df, "Path to Conversion")
+                st.download_button(
+                    label="📥 **Download Path to Conversion Presentation (.pptx)**",
+                    data=ppt_buffer,
+                    file_name=f"path_to_conversion_analysis_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pptx",
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key="ppt_download_path_conversion"
+                )
+            st.success("✅ PowerPoint presentation generated successfully! Click the download button above.")
 
     # Generate path charts button under the two tables
     generate_path_charts = st.button("📊 Generate Path to Conversion Charts", key="generate_path_charts")
