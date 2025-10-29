@@ -81,9 +81,13 @@ def get_column_highlights(df):
 
     return existing_conv_cols, existing_cons_cols
 
-def format_path_channels(path):
+def format_path_channels(path, separator=" -> "):
     """
-    Format path channels from "1/DSP, 2/DSP BRAND STORE" to "[DSP] -> [DSP BRAND STORE]"
+    Format path channels from "1/DSP, 2/DSP BRAND STORE" to "DSP [separator] DSP BRAND STORE"
+
+    Args:
+        path: Path string to format
+        separator: String to use between channels (default: " -> ")
     """
     if pd.isna(path) or not path:
         return ""
@@ -110,8 +114,11 @@ def format_path_channels(path):
         else:
             channels = [path_clean.strip()]
 
-    # Format as channel1 -> channel2 -> ...
-    formatted_path = ' -> '.join(channels)
+    # Format as channel1 + channel2 + ... (use specified separator)
+    if len(channels) > 1:
+        formatted_path = separator.join(channels)
+    else:
+        formatted_path = channels[0] if channels else ""
     return formatted_path
 
 def display_quick_stats(df, key_prefix=""):
@@ -1268,7 +1275,7 @@ def media_mix_tab():
                 ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
                 consideration_data.append({
-                    'Type de parcours': format_path_channels(path),
+                    'Type de parcours': format_path_channels(path, " + "),
                     'CPDPV post clic (€)': avg_cpdpv,  # Numeric for perfect sorting
                     'Reach': total_reach,  # Numeric for perfect sorting
                     'Nb pages vues': total_dpv,  # Numeric for perfect sorting
@@ -1330,7 +1337,7 @@ def media_mix_tab():
                 ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
                 conversion_data.append({
-                    'Type de parcours': format_path_channels(path),
+                    'Type de parcours': format_path_channels(path, " + "),
                     'Taux de conversion (%)': conversion_rate,  # Numeric for sorting
                     'ROAS': roas,  # Numeric for sorting
                     'Nombre de conversions': total_purchases,  # Numeric for sorting
