@@ -9,7 +9,7 @@ import numpy as np
 import time
 from io import BytesIO
 from pptx import Presentation
-from pptx.util import Inches
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 
 # Utility functions
@@ -946,139 +946,29 @@ def campaign_summary_tab():
             with col3:
                 create_kpi_metric("NTB ROAS", ntb_roas_filtered, "decimal")
 
-        # Export KPIs section
+        # PowerPoint Export section
         st.markdown("---")
-        st.subheader("📊 Export Key Campaign Metrics")
 
-        # Create dataframe with KPI data for export
-        kpi_data = {
-            'Metric': [
-                'Total Budget Spent',
-                'Total Revenue Generated',
-                'Overall ROAS',
-                'Total Reach',
-                'Total DPV',
-                'Overall CPDPV',
-                'Total Purchases',
-                'Conversion Rate',
-                'Purchase ROAS',
-                'NTB Purchases',
-                'NTB Conversion Rate',
-                'NTB ROAS'
-            ],
-            'Value': [
-                total_cost_filtered,
-                total_revenue_filtered,
-                overall_roas_filtered,
-                total_reach_filtered,
-                total_dpv_filtered,
-                avg_cpdpv_filtered,
-                total_purchases_filtered,
-                conversion_rate_filtered,
-                purchase_roas_filtered,
-                total_ntb_purchases_filtered,
-                ntb_conversion_rate_filtered,
-                ntb_roas_filtered
-            ],
-            'Unit': [
-                '€',
-                '€',
-                '',
-                '',
-                '',
-                '€',
-                '',
-                '%',
-                '',
-                '',
-                '%',
-                ''
-            ],
-            'Category': [
-                'Budget',
-                'Revenue',
-                'ROAS',
-                'Awareness',
-                'Engagement',
-                'Efficiency',
-                'Performance',
-                'Rate',
-                'ROAS',
-                'NTB',
-                'NTB Rate',
-                'NTB ROAS'
-            ]
-        }
-
-        kpi_export_df = pd.DataFrame(kpi_data)
-
-        # Display toggle to show/hide KPI table
-        show_kpi_table = st.checkbox("Show KPI Table", key="show_kpi_export_table")
-
-        if show_kpi_table:
-            # Style the dataframe
-            def highlight_categories(row):
-                if row['Category'] == 'Budget':
-                    return ['background-color: #e3f2fd'] * len(row)
-                elif row['Category'] == 'Revenue':
-                    return ['background-color: #f3e5f5'] * len(row)
-                elif row['Category'] == 'ROAS':
-                    return ['background-color: #e8f5e8'] * len(row)
-                elif row['Category'] == 'Awareness':
-                    return ['background-color: #fff3e0'] * len(row)
-                elif row['Category'] == 'Engagement':
-                    return ['background-color: #fce4ec'] * len(row)
-                elif row['Category'] == 'Efficiency':
-                    return ['background-color: #f1f8e9'] * len(row)
-                elif 'Performance' in row['Category']:
-                    return ['background-color: #e0f2f1'] * len(row)
-                elif 'NTB' in row['Category']:
-                    return ['background-color: #f3e5f5'] * len(row)
-                elif 'Rate' in row['Category']:
-                    return ['background-color: #fce4ec'] * len(row)
-                else:
-                    return [''] * len(row)
-
-            styled_kpi_df = kpi_export_df.style.apply(highlight_categories, axis=1)
-
-            st.dataframe(
-                styled_kpi_df,
-                column_config={
-                    "Metric": st.column_config.TextColumn("Metric", width=200),
-                    "Value": st.column_config.NumberColumn("Value", format="%.2f"),
-                    "Unit": st.column_config.TextColumn("Unit", width=50),
-                    "Category": st.column_config.TextColumn("Category", width=100)
-                },
-                width='stretch',
-                hide_index=True
-            )
-
-        # Export buttons
-        col_exp1, col_exp2 = st.columns(2)
-
-        with col_exp1:
-            csv_kpi_data = kpi_export_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download KPIs CSV",
-                data=csv_kpi_data,
-                file_name=f"kpi_metrics_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv",
-                key="download_kpi_csv_campaign_summary"
-            )
-
-        with col_exp2:
-            import io
-            kpi_buffer = io.BytesIO()
-            kpi_export_df.to_excel(kpi_buffer, index=False, engine='openpyxl')
-            kpi_excel_data = kpi_buffer.getvalue()
-
-            st.download_button(
-                label="📥 Download KPIs Excel",
-                data=kpi_excel_data,
-                file_name=f"kpi_metrics_export_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_kpi_excel_campaign_summary"
-            )
+        # PowerPoint Export
+        if st.button("📊 Export Campaign Summary to PowerPoint", key="ppt_export_campaign_summary"):
+            with st.spinner("Generating PowerPoint presentation..."):
+                ppt_buffer = export_campaign_summary_to_ppt(
+                    # KPI values for slide 2 (4x3 grid)
+                    total_cost_filtered, total_revenue_filtered, overall_roas_filtered,
+                    total_reach_filtered, total_dpv_filtered, avg_cpdpv_filtered,
+                    total_purchases_filtered, conversion_rate_filtered, purchase_roas_filtered,
+                    total_ntb_purchases_filtered, ntb_conversion_rate_filtered, ntb_roas_filtered,
+                    # Chart and metrics for slide 1
+                    fig, total_cost, total_impressions, total_conversions
+                )
+                st.download_button(
+                    label="📥 **Download Campaign Summary Presentation (.pptx)**",
+                    data=ppt_buffer,
+                    file_name=f"campaign_summary_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pptx",
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key="ppt_download_campaign_summary"
+                )
+            st.success("✅ PowerPoint presentation generated successfully! Click the download button above.")
 
         # Optional: Show table with detailed breakdown
         # st.dataframe(channel_cost[['channel', 'impressions_cost', 'percentage']].rename(
@@ -2090,6 +1980,139 @@ def export_tables_to_ppt(consideration_df, conversion_df, tab_name="Media Mix"):
         table_slide_layout = prs.slide_layouts[5]  # blank slide
         slide = prs.slides.add_slide(table_slide_layout)
         create_ppt_table(slide.shapes, conversion_df, "🎯 Conversion")
+
+    # Save presentation to BytesIO
+    ppt_buffer = BytesIO()
+    prs.save(ppt_buffer)
+    ppt_buffer.seek(0)
+
+    return ppt_buffer
+
+def export_campaign_summary_to_ppt(
+    cost_filtered, revenue_filtered, roas_filtered,
+    reach_filtered, dpv_filtered, cpdpv_filtered,
+    purchases_filtered, conversion_rate_filtered, purchase_roas_filtered,
+    ntb_purchases_filtered, ntb_conversion_rate_filtered, ntb_roas_filtered,
+    fig, total_cost, total_impressions, total_conversions
+):
+    """
+    Export campaign summary to PowerPoint presentation with two slides:
+    - Slide 1: Main metrics and cost distribution chart
+    - Slide 2: Full KPI grid (4x3)
+    """
+    # Create presentation
+    prs = Presentation()
+
+    # SLIDE 1: Main metrics and chart
+    title_slide_layout = prs.slide_layouts[0]
+    slide1 = prs.slides.add_slide(title_slide_layout)
+    title = slide1.shapes.title
+    subtitle = slide1.placeholders[1]
+
+    title.text = "AMC Analytics - Campaign Summary"
+    subtitle.text = f"Overview Metrics - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}"
+
+    # Add main metrics at the top
+    slide_width = prs.slide_width
+    slide_height = prs.slide_height
+    metric_left = Inches(2)
+    metric_top = Inches(1.5)
+    metric_width = Inches(2.5)
+    metric_height = Inches(1)
+
+    # Formatter for metrics
+    def format_metric_value(value, format_type="integer"):
+        if pd.isna(value):
+            return "N/A"
+        if format_type == "currency":
+            if abs(value) < 1000:
+                return f"{value:,.0f} €"
+            else:
+                return f"{value:,.0f} €"
+        elif format_type == "integer":
+            return f"{value:,.0f}".replace(',', ' ')
+        else:
+            return str(value)
+
+    # Add three main metrics
+    metrics = [
+        ("Total Cost", format_metric_value(total_cost, "currency"), Inches(2)),
+        ("Total Impressions", format_metric_value(total_impressions, "integer"), Inches(5)),
+        ("Total Conversions", format_metric_value(total_conversions, "integer"), Inches(8))
+    ]
+
+    for label, value, left_pos in metrics:
+        metric_shape = slide1.shapes.add_textbox(left_pos, metric_top, metric_width, metric_height)
+        tf = metric_shape.text_frame
+        tf.text = f"{label}\n{value}"
+        tf.paragraphs[0].font.size = Pt(18)
+        tf.paragraphs[0].font.bold = True
+        tf.paragraphs[1].font.size = Pt(24)
+        tf.paragraphs[1].font.bold = True
+        tf.paragraphs[1].font.color.rgb = RGBColor(79, 129, 189)
+
+    # Add chart below the metrics (using plotly's static image export)
+    import plotly.io as pio
+    import io as python_io
+
+    # Convert plotly figure to image
+    chart_img_data = pio.to_image(fig, format='png', width=800, height=400)
+    chart_img_stream = python_io.BytesIO(chart_img_data)
+
+    # Add chart to slide
+    chart_left = Inches(1)
+    chart_top = Inches(3.5)
+    chart_width = Inches(11)
+    chart_height = Inches(4)
+
+    slide1.shapes.add_picture(chart_img_stream, chart_left, chart_top, chart_width, chart_height)
+
+    # SLIDE 2: KPI Grid
+    table_slide_layout = prs.slide_layouts[5]  # blank slide
+    slide2 = prs.slides.add_slide(table_slide_layout)
+    slide2.shapes.title.text = "Key Performance Indicators"
+
+    # Create grid labels and values
+    grid_data = [
+        ["", "Budget", "Revenue", "ROAS"],
+        ["Overview", format_metric_value(cost_filtered, "currency"), format_metric_value(revenue_filtered, "currency"), format_metric_value(roas_filtered, "decimal")],
+        ["Awareness", format_metric_value(reach_filtered, "integer"), "", ""],
+        ["Engagement", format_metric_value(dpv_filtered, "integer"), format_metric_value(cpdpv_filtered, "currency"), ""],
+        ["Purchase", format_metric_value(purchases_filtered, "integer"), format_metric_value(conversion_rate_filtered, "percentage"), format_metric_value(purchase_roas_filtered, "decimal")],
+        ["NTB", format_metric_value(ntb_purchases_filtered, "integer"), format_metric_value(ntb_conversion_rate_filtered, "percentage"), format_metric_value(ntb_roas_filtered, "decimal")]
+    ]
+
+    # Calculate table dimensions and positions
+    slide_width = prs.slide_width
+    slide_height = prs.slide_height
+    margin = Inches(0.5)
+    table_top = Inches(1.7)
+    table_width = slide_width - 2 * margin
+    table_height = Inches(5.5)
+
+    if grid_data:
+        rows_count = len(grid_data)
+        cols_count = len(grid_data[0])
+
+        table = slide2.shapes.add_table(rows_count, cols_count, margin, table_top, table_width, table_height)
+        table = table.table
+
+        # Fill table data
+        for row_idx, row_data in enumerate(grid_data):
+            for col_idx, cell_value in enumerate(row_data):
+                cell = table.cell(row_idx, col_idx)
+                cell.text = str(cell_value)
+
+                # Style headers (first row and first column)
+                if row_idx == 0 or col_idx == 0:
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
+                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
+                    cell.text_frame.paragraphs[0].font.bold = True
+                    cell.text_frame.paragraphs[0].font.size = Pt(14)
+                else:
+                    # Data cells
+                    cell.text_frame.paragraphs[0].font.size = Pt(12)
 
     # Save presentation to BytesIO
     ppt_buffer = BytesIO()
