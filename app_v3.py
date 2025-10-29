@@ -1375,6 +1375,20 @@ def media_mix_tab():
             # Display dataframe with proper formatting and sorting
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
+    # PowerPoint Export
+    if not consideration_df.empty and not conversion_df.empty:
+        if st.button("📄 Export to PowerPoint", key="ppt_export_media_mix"):
+            with st.spinner("Generating PowerPoint presentation..."):
+                ppt_buffer = export_tables_to_ppt(consideration_df, conversion_df, "Media Mix")
+                st.download_button(
+                    label="📥 **Download Media Mix Presentation (.pptx)**",
+                    data=ppt_buffer,
+                    file_name=f"media_mix_analysis_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pptx",
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    key="ppt_download_media_mix"
+                )
+            st.success("✅ PowerPoint presentation generated successfully! Click the download button above.")
+
     # Generate plots button
     generate_plots = st.button("📊 Generate Overlap Charts", key="generate_plots_media_mix")
 
