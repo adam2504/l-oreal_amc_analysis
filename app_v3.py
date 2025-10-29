@@ -7,6 +7,10 @@ import re
 from collections import defaultdict, Counter
 import numpy as np
 import time
+from io import BytesIO
+from pptx import Presentation
+from pptx.util import Inches
+from pptx.dml.color import RGBColor
 
 # Utility functions
 def format_number_for_sortable_copy(value, format_type="default", padding_width=10):
@@ -1541,6 +1545,21 @@ def path_to_conversion_tab():
             # Display dataframe with proper formatting and sorting
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
+    # PowerPoint Export section
+    if not consideration_df.empty and not conversion_df.empty:
+        col_export1, col_export2 = st.columns([1, 3])
+        with col_export1:
+            if st.button("📄 Export to PowerPoint", key="ppt_export_path_conversion"):
+                with st.spinner("Generating PowerPoint presentation..."):
+                    ppt_buffer = export_tables_to_ppt(consideration_df, conversion_df, "Path to Conversion")
+                    st.download_button(
+                        label="📥 Download Path to Conversion Presentation",
+                        data=ppt_buffer,
+                        file_name=f"path_to_conversion_analysis_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.pptx",
+                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        key="ppt_download_path_conversion"
+                    )
+
     # Generate path charts button under the two tables
     generate_path_charts = st.button("📊 Generate Path to Conversion Charts", key="generate_path_charts")
 
@@ -1815,6 +1834,132 @@ def create_circle_shape(center, radius, color, opacity):
         opacity=opacity,
         line=dict(width=2, color=color)
     )
+
+def export_tables_to_ppt(consideration_df, conversion_df, tab_name="Media Mix"):
+    """
+    Export consideration and conversion tables to PowerPoint presentation
+    """
+    # Create presentation
+    prs = Presentation()
+
+    # Slide 1: Title slide
+    title_slide_layout = prs.slide_layouts[0]
+    slide = prs.slides.add_slide(title_slide_layout)
+    title = slide.shapes.title
+    subtitle = slide.placeholders[1]
+
+    title.text = f"AMC Analytics - {tab_name}"
+    subtitle.text = f"Considération & Conversion Tables - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}"
+
+    # Slide 2: Tables slide
+    table_slide_layout = prs.slide_layouts[5]  # blank slide
+    slide = prs.slides.add_slide(table_slide_layout)
+
+    # Set slide title
+    shapes = slide.shapes
+    shapes.title.text = "Analyse Considération & Conversion"
+
+    # Calculate table dimensions and positions
+    slide_width = prs.slide_width
+    slide_height = prs.slide_height
+    margin = Inches(0.5)
+
+    # Left table position (consideration)
+    left_table_width = Inches(4.5)
+    left_table_height = Inches(5)
+    left_table_left = margin
+    left_table_top = Inches(0.8)
+
+    # Right table position (conversion)
+    right_table_width = Inches(4.0)
+    right_table_height = Inches(5)
+    right_table_left = Inches(5.0)
+    right_table_top = Inches(0.8)
+
+    # Function to format numeric values for PowerPoint
+    def format_cell_value(value, col_name):
+        if pd.isna(value):
+            return "N/A"
+        try:
+            if col_name == "CPDPV post clic (€)" or col_name == "Reach" or col_name == "Nb pages vues":
+                return f"{value:,.0f}" if abs(value) > 10 else f"{value:.1f}"
+            elif col_name == "ROAS":
+                return f"{value:.2f}"
+            elif "conversion" in col_name.lower() and "%" in col_name:
+                return f"{value:.2f}%"
+            elif col_name == "Part de ventes NTB (%)":
+                return f"{value:.1f}%"
+            elif col_name == "Nombre de conversions":
+                return f"{value:,.0f}"
+            else:
+                return str(value)
+        except:
+            return str(value)
+
+    # Create consideration table (left side)
+    if not consideration_df.empty:
+        cols_count = len(consideration_df.columns)
+        rows_count = len(consideration_df) + 1  # +1 for header
+
+        table_left = shapes.add_table(rows_count, cols_count, left_table_left, left_table_top, left_table_width, left_table_height)
+        table_left = table_left.table
+
+        # Add headers
+        for col_idx, col_name in enumerate(consideration_df.columns):
+            table_left.cell(0, col_idx).text = col_name
+
+        # Add data rows
+        for row_idx, (_, row) in enumerate(consideration_df.iterrows()):
+            for col_idx, (col_name, value) in enumerate(row.items()):
+                formatted_value = format_cell_value(value, col_name)
+                table_left.cell(row_idx + 1, col_idx).text = formatted_value
+
+        # Style the table
+        for row_idx in range(rows_count):
+            for col_idx in range(cols_count):
+                cell = table_left.cell(row_idx, col_idx)
+                # Header row styling
+                if row_idx == 0:
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
+                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
+                    cell.text_frame.paragraphs[0].font.bold = True
+
+    # Create conversion table (right side)
+    if not conversion_df.empty:
+        cols_count = len(conversion_df.columns)
+        rows_count = len(conversion_df) + 1  # +1 for header
+
+        table_right = shapes.add_table(rows_count, cols_count, right_table_left, right_table_top, right_table_width, right_table_height)
+        table_right = table_right.table
+
+        # Add headers
+        for col_idx, col_name in enumerate(conversion_df.columns):
+            table_right.cell(0, col_idx).text = col_name
+
+        # Add data rows
+        for row_idx, (_, row) in enumerate(conversion_df.iterrows()):
+            for col_idx, (col_name, value) in enumerate(row.items()):
+                formatted_value = format_cell_value(value, col_name)
+                table_right.cell(row_idx + 1, col_idx).text = formatted_value
+
+        # Style the table
+        for row_idx in range(rows_count):
+            for col_idx in range(cols_count):
+                cell = table_right.cell(row_idx, col_idx)
+                # Header row styling
+                if row_idx == 0:
+                    cell.fill.solid()
+                    cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
+                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
+                    cell.text_frame.paragraphs[0].font.bold = True
+
+    # Save presentation to BytesIO
+    ppt_buffer = BytesIO()
+    prs.save(ppt_buffer)
+    ppt_buffer.seek(0)
+
+    return ppt_buffer
 
 def documentation_tab():
     st.subheader("Key Performance Indicators (KPIs)")
