@@ -1857,7 +1857,7 @@ def create_circle_shape(center, radius, color, opacity):
 
 def export_tables_to_ppt(consideration_df, conversion_df, tab_name="Media Mix"):
     """
-    Export consideration and conversion tables to PowerPoint presentation
+    Export consideration and conversion tables to PowerPoint presentation - one table per slide
     """
     # Create presentation
     prs = Presentation()
@@ -1871,30 +1871,16 @@ def export_tables_to_ppt(consideration_df, conversion_df, tab_name="Media Mix"):
     title.text = f"AMC Analytics - {tab_name}"
     subtitle.text = f"Considération & Conversion Tables - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}"
 
-    # Slide 2: Tables slide
-    table_slide_layout = prs.slide_layouts[5]  # blank slide
-    slide = prs.slides.add_slide(table_slide_layout)
-
-    # Set slide title
-    shapes = slide.shapes
-    shapes.title.text = "Analyse Considération & Conversion"
-
-    # Calculate table dimensions and positions
+    # Calculate table dimensions and positions (centered on slide)
     slide_width = prs.slide_width
     slide_height = prs.slide_height
     margin = Inches(0.5)
+    title_top = Inches(0.3)  # Title positioned higher up
+    table_top = Inches(1.5)  # Table moved lower down
 
-    # Left table position (consideration)
-    left_table_width = Inches(4.5)
-    left_table_height = Inches(5)
-    left_table_left = margin
-    left_table_top = Inches(0.8)
-
-    # Right table position (conversion)
-    right_table_width = Inches(4.0)
-    right_table_height = Inches(5)
-    right_table_left = Inches(5.0)
-    right_table_top = Inches(0.8)
+    # Single table dimensions (centered and larger)
+    table_width = slide_width - 2 * margin
+    table_height = Inches(5.0)  # Slightly reduced height to accommodate positioning
 
     # Function to format numeric values for PowerPoint
     def format_cell_value(value, col_name):
@@ -1916,63 +1902,50 @@ def export_tables_to_ppt(consideration_df, conversion_df, tab_name="Media Mix"):
         except:
             return str(value)
 
-    # Create consideration table (left side)
+    def create_ppt_table(shapes, df, slide_title):
+        """Helper function to create a single table on a slide"""
+        # Set slide title
+        shapes.title.text = slide_title
+
+        if not df.empty:
+            cols_count = len(df.columns)
+            rows_count = len(df) + 1  # +1 for header
+
+            table = shapes.add_table(rows_count, cols_count, margin, table_top, table_width, table_height)
+            table = table.table
+
+            # Add headers
+            for col_idx, col_name in enumerate(df.columns):
+                table.cell(0, col_idx).text = col_name
+
+            # Add data rows
+            for row_idx, (_, row) in enumerate(df.iterrows()):
+                for col_idx, (col_name, value) in enumerate(row.items()):
+                    formatted_value = format_cell_value(value, col_name)
+                    table.cell(row_idx + 1, col_idx).text = formatted_value
+
+            # Style the table
+            for row_idx in range(rows_count):
+                for col_idx in range(cols_count):
+                    cell = table.cell(row_idx, col_idx)
+                    # Header row styling
+                    if row_idx == 0:
+                        cell.fill.solid()
+                        cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
+                        cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
+                        cell.text_frame.paragraphs[0].font.bold = True
+
+    # Slide 2: Consideration table
     if not consideration_df.empty:
-        cols_count = len(consideration_df.columns)
-        rows_count = len(consideration_df) + 1  # +1 for header
+        table_slide_layout = prs.slide_layouts[5]  # blank slide
+        slide = prs.slides.add_slide(table_slide_layout)
+        create_ppt_table(slide.shapes, consideration_df, "🟠 Considération")
 
-        table_left = shapes.add_table(rows_count, cols_count, left_table_left, left_table_top, left_table_width, left_table_height)
-        table_left = table_left.table
-
-        # Add headers
-        for col_idx, col_name in enumerate(consideration_df.columns):
-            table_left.cell(0, col_idx).text = col_name
-
-        # Add data rows
-        for row_idx, (_, row) in enumerate(consideration_df.iterrows()):
-            for col_idx, (col_name, value) in enumerate(row.items()):
-                formatted_value = format_cell_value(value, col_name)
-                table_left.cell(row_idx + 1, col_idx).text = formatted_value
-
-        # Style the table
-        for row_idx in range(rows_count):
-            for col_idx in range(cols_count):
-                cell = table_left.cell(row_idx, col_idx)
-                # Header row styling
-                if row_idx == 0:
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
-                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
-                    cell.text_frame.paragraphs[0].font.bold = True
-
-    # Create conversion table (right side)
+    # Slide 3: Conversion table
     if not conversion_df.empty:
-        cols_count = len(conversion_df.columns)
-        rows_count = len(conversion_df) + 1  # +1 for header
-
-        table_right = shapes.add_table(rows_count, cols_count, right_table_left, right_table_top, right_table_width, right_table_height)
-        table_right = table_right.table
-
-        # Add headers
-        for col_idx, col_name in enumerate(conversion_df.columns):
-            table_right.cell(0, col_idx).text = col_name
-
-        # Add data rows
-        for row_idx, (_, row) in enumerate(conversion_df.iterrows()):
-            for col_idx, (col_name, value) in enumerate(row.items()):
-                formatted_value = format_cell_value(value, col_name)
-                table_right.cell(row_idx + 1, col_idx).text = formatted_value
-
-        # Style the table
-        for row_idx in range(rows_count):
-            for col_idx in range(cols_count):
-                cell = table_right.cell(row_idx, col_idx)
-                # Header row styling
-                if row_idx == 0:
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
-                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
-                    cell.text_frame.paragraphs[0].font.bold = True
+        table_slide_layout = prs.slide_layouts[5]  # blank slide
+        slide = prs.slides.add_slide(table_slide_layout)
+        create_ppt_table(slide.shapes, conversion_df, "🎯 Conversion")
 
     # Save presentation to BytesIO
     ppt_buffer = BytesIO()
