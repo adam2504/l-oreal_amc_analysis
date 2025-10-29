@@ -1235,9 +1235,10 @@ def media_mix_tab():
     display_df = display_sorting_controls(filtered_df, "media_mix")
 
     # Add derived columns for NTB percentage with proper formatting for copy-paste
-    if 'NTB' in display_df.columns and 'PURCHASES' in display_df.columns:
-        display_df = display_df.assign(
-            **{'Part de ventes NTB (%)': (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)}
+    # (Do this BEFORE creating table data so consideration table can also use it)
+    if 'NTB' in filtered_df.columns and 'PURCHASES' in filtered_df.columns:
+        filtered_df = filtered_df.assign(
+            **{'Part de ventes NTB (%)': (filtered_df['NTB'] / filtered_df['PURCHASES'] * 100).fillna(0)}
         )
 
     # Extract unique paths for consideration table
@@ -1293,7 +1294,7 @@ def media_mix_tab():
                 ),
                 "Part de ventes NTB (%)": st.column_config.NumberColumn(
                     "Part de ventes NTB (%)",
-                    format="%.1f",
+                    format="%.1f%%",
                     width=140
                 )
             }
@@ -1312,6 +1313,7 @@ def media_mix_tab():
             if len(path_df) > 0:
                 # Calculate aggregated metrics
                 total_purchases = path_df['PURCHASES'].sum() if 'PURCHASES' in path_df.columns else 0
+                total_ntb = path_df['NTB'].sum() if 'NTB' in path_df.columns else 0
                 total_dpv = path_df['DPV'].sum() if 'DPV' in path_df.columns else 0
                 conversion_rate = (total_purchases / total_dpv * 100) if total_dpv > 0 else 0
 
@@ -1320,7 +1322,8 @@ def media_mix_tab():
                 total_revenue = path_df['REVENUE'].sum() if 'REVENUE' in path_df.columns else 0
                 roas = total_revenue / total_cost if total_cost > 0 else 0
 
-                ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
+                # Use consistent calculation for conversion table - same as consideration table
+                ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
                 conversion_data.append({
                     'Type de parcours': format_path_channels(path),
@@ -1410,9 +1413,10 @@ def path_to_conversion_tab():
     display_df = display_sorting_controls(filtered_df, "path_to_conversion")
 
     # Add derived columns for NTB percentage with proper formatting for copy-paste
-    if 'NTB' in display_df.columns and 'PURCHASES' in display_df.columns:
-        display_df = display_df.assign(
-            **{'Part de ventes NTB (%)': (display_df['NTB'] / display_df['PURCHASES'] * 100).fillna(0)}
+    # (Do this BEFORE creating table data so consideration table can also use it)
+    if 'NTB' in filtered_df.columns and 'PURCHASES' in filtered_df.columns:
+        filtered_df = filtered_df.assign(
+            **{'Part de ventes NTB (%)': (filtered_df['NTB'] / filtered_df['PURCHASES'] * 100).fillna(0)}
         )
 
     # Extract unique paths for consideration table
@@ -1468,7 +1472,7 @@ def path_to_conversion_tab():
                 ),
                 "Part de ventes NTB (%)": st.column_config.NumberColumn(
                     "Part de ventes NTB (%)",
-                    format="%.1f",
+                    format="%.1f%%",
                     width=140
                 )
             }
@@ -1495,7 +1499,8 @@ def path_to_conversion_tab():
                 total_revenue = path_df['REVENUE'].sum() if 'REVENUE' in path_df.columns else 0
                 roas = total_revenue / total_cost if total_cost > 0 else 0
 
-                ntb_percentage = path_df['% NTB'].mean() if '% NTB' in path_df.columns else 0
+                # Use consistent calculation for conversion table - same as consideration table
+                ntb_percentage = path_df['Part de ventes NTB (%)'].sum() if 'Part de ventes NTB (%)' in path_df.columns else 0
 
                 conversion_data.append({
                     'Type de parcours': format_path_channels(path),
