@@ -1375,11 +1375,83 @@ def media_mix_tab():
             # Display dataframe with proper formatting and sorting
             st.dataframe(conversion_df, column_config=column_config, width='content', hide_index=True)
 
+    # Export Options for PowerPoint
+    st.subheader("📊 PowerPoint Export Options")
+
+    col_exp1, col_exp2 = st.columns(2)
+
+    # Consideration table export options
+    with col_exp1:
+        st.markdown("##### 🔍 Considération Table")
+        cons_sort_column = st.selectbox(
+            "Sort by column",
+            options=list(consideration_df.columns[1:]),  # Skip "Type de parcours" (index 0)
+            key="cons_sort_col",
+            help="Choose which column to sort the consideration table by for export"
+        )
+        cons_sort_order = st.radio(
+            "Sort order",
+            options=["Descending", "Ascending"],
+            index=0,  # Descending by default
+            key="cons_sort_order",
+            help="Choose ascending or descending sort order"
+        )
+        cons_max_rows = st.slider(
+            "Maximum rows to export",
+            min_value=1,
+            max_value=len(consideration_df),
+            value=min(10, len(consideration_df)),
+            key="cons_max_rows",
+            help="How many top rows to include in the exported consideration table"
+        )
+
+    # Conversion table export options
+    with col_exp2:
+        st.markdown("##### 🎯 Conversion Table")
+        conv_sort_column = st.selectbox(
+            "Sort by column",
+            options=list(conversion_df.columns[1:]),  # Skip "Type de parcours" (index 0)
+            key="conv_sort_col",
+            help="Choose which column to sort the conversion table by for export"
+        )
+        conv_sort_order = st.radio(
+            "Sort order",
+            options=["Descending", "Ascending"],
+            index=0,  # Descending by default
+            key="conv_sort_order",
+            help="Choose ascending or descending sort order"
+        )
+        conv_max_rows = st.slider(
+            "Maximum rows to export",
+            min_value=1,
+            max_value=len(conversion_df),
+            value=min(10, len(conversion_df)),
+            key="conv_max_rows",
+            help="How many top rows to include in the exported conversion table"
+        )
+
+    # Apply the sorting and filtering to create export versions
+    # Consideration table export version
+    consideration_export_df = consideration_df.copy()
+    if cons_sort_order == "Descending":
+        consideration_export_df = consideration_export_df.sort_values(cons_sort_column, ascending=False)
+    else:
+        consideration_export_df = consideration_export_df.sort_values(cons_sort_column, ascending=True)
+    consideration_export_df = consideration_export_df.head(cons_max_rows)
+
+    # Conversion table export version
+    conversion_export_df = conversion_df.copy()
+    if conv_sort_order == "Descending":
+        conversion_export_df = conversion_export_df.sort_values(conv_sort_column, ascending=False)
+    else:
+        conversion_export_df = conversion_export_df.sort_values(conv_sort_column, ascending=True)
+    conversion_export_df = conversion_export_df.head(conv_max_rows)
+
     # PowerPoint Export
-    if not consideration_df.empty and not conversion_df.empty:
+    if not consideration_export_df.empty and not conversion_export_df.empty:
         if st.button("📄 Export to PowerPoint", key="ppt_export_media_mix"):
             with st.spinner("Generating PowerPoint presentation..."):
-                ppt_buffer = export_tables_to_ppt(consideration_df, conversion_df, "Media Mix")
+                ppt_buffer = export_tables_to_ppt(consideration_export_df, conversion_export_df, "Media Mix")
                 st.download_button(
                     label="📥 **Download Media Mix Presentation (.pptx)**",
                     data=ppt_buffer,
@@ -1939,7 +2011,7 @@ def export_tables_to_ppt(consideration_df, conversion_df, tab_name="Media Mix"):
     if not consideration_df.empty:
         table_slide_layout = prs.slide_layouts[5]  # blank slide
         slide = prs.slides.add_slide(table_slide_layout)
-        create_ppt_table(slide.shapes, consideration_df, "🟠 Considération")
+        create_ppt_table(slide.shapes, consideration_df, "🔍 Considération")
 
     # Slide 3: Conversion table
     if not conversion_df.empty:
