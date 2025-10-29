@@ -1817,7 +1817,7 @@ def create_circle_shape(center, radius, color, opacity):
     )
 
 def documentation_tab():
-    st.subheader("Key Performance Indicators (KPIs) - Test")
+    st.subheader("Key Performance Indicators (KPIs)")
 
     # Awareness KPIs
     st.markdown("### Awareness")
