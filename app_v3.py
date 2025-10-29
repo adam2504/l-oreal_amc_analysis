@@ -1038,7 +1038,7 @@ def campaign_summary_tab():
                     "Unit": st.column_config.TextColumn("Unit", width=50),
                     "Category": st.column_config.TextColumn("Category", width=100)
                 },
-                use_container_width=True,
+                width='stretch',
                 hide_index=True
             )
 
