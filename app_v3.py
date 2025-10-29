@@ -2003,7 +2003,7 @@ def export_campaign_summary_to_ppt(
     # Create presentation
     prs = Presentation()
 
-    # SLIDE 1: Main metrics and chart
+    # SLIDE 1: Title slide (like other exports)
     title_slide_layout = prs.slide_layouts[0]
     slide1 = prs.slides.add_slide(title_slide_layout)
     title = slide1.shapes.title
@@ -2012,13 +2012,30 @@ def export_campaign_summary_to_ppt(
     title.text = "AMC Analytics - Campaign Summary"
     subtitle.text = f"Overview Metrics - {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}"
 
-    # Add main metrics at the top
+    # SLIDE 2: Main metrics and chart
+    table_slide_layout = prs.slide_layouts[5]  # blank slide
+    slide2 = prs.slides.add_slide(table_slide_layout)
+    slide2.shapes.title.text = "Campaign Metrics Overview"
+
+    # Add rectangle shape with main metrics at center-top (moved down and left)
     slide_width = prs.slide_width
     slide_height = prs.slide_height
-    metric_left = Inches(2)
-    metric_top = Inches(1.5)
-    metric_width = Inches(2.5)
-    metric_height = Inches(1)
+
+    # Oval dimensions - elongated oval at center-top, moved down and left
+    rect_left = Inches(1.5)  # Moved more to the left
+    rect_top = Inches(2)   # Moved down
+    rect_width = Inches(7)   # Increased width to accommodate all 3 KPIs without overflow
+    rect_height = Inches(1)
+
+    # Add rounded rectangle shape (instead of straight rectangle)
+    rect = slide2.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect_left, rect_top, rect_width, rect_height
+    )
+    rect.fill.solid()
+    rect.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue
+    rect.line.color.rgb = RGBColor(79, 129, 189)  # Dark blue border
+    rect.line.width = Pt(2)
 
     # Formatter for metrics
     def format_metric_value(value, format_type="integer"):
@@ -2034,22 +2051,32 @@ def export_campaign_summary_to_ppt(
         else:
             return str(value)
 
-    # Add three main metrics
+    # Add three main metrics inside the oval, side by side
     metrics = [
-        ("Total Cost", format_metric_value(total_cost, "currency"), Inches(2)),
-        ("Total Impressions", format_metric_value(total_impressions, "integer"), Inches(5)),
-        ("Total Conversions", format_metric_value(total_conversions, "integer"), Inches(8))
+        ("Total Cost", format_metric_value(total_cost, "currency")),
+        ("Total Impressions", format_metric_value(total_impressions, "integer")),
+        ("Total Conversions", format_metric_value(total_conversions, "integer"))
     ]
 
-    for label, value, left_pos in metrics:
-        metric_shape = slide1.shapes.add_textbox(left_pos, metric_top, metric_width, metric_height)
+    # Create text boxes inside the rectangle
+    text_left = rect_left + Inches(0.3)
+    metric_spacing = Inches(2)  # Space between each metric
+
+    for i, (label, value) in enumerate(metrics):
+        metric_left = text_left + (i * (metric_spacing + Inches(0.5)))
+
+        metric_shape = slide2.shapes.add_textbox(
+            metric_left, rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+        )
         tf = metric_shape.text_frame
         tf.text = f"{label}\n{value}"
-        tf.paragraphs[0].font.size = Pt(18)
+        tf.paragraphs[0].font.size = Pt(12)
         tf.paragraphs[0].font.bold = True
-        tf.paragraphs[1].font.size = Pt(24)
+        tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+
+        tf.paragraphs[1].font.size = Pt(14)
         tf.paragraphs[1].font.bold = True
-        tf.paragraphs[1].font.color.rgb = RGBColor(79, 129, 189)
+        tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
 
     # Add chart below the metrics (using plotly's static image export)
     import plotly.io as pio
@@ -2062,15 +2089,15 @@ def export_campaign_summary_to_ppt(
     # Add chart to slide
     chart_left = Inches(1)
     chart_top = Inches(3.5)
-    chart_width = Inches(11)
-    chart_height = Inches(4)
+    chart_width = Inches(9)
+    chart_height = Inches(2.5)
 
-    slide1.shapes.add_picture(chart_img_stream, chart_left, chart_top, chart_width, chart_height)
+    slide2.shapes.add_picture(chart_img_stream, chart_left, chart_top, chart_width, chart_height)
 
-    # SLIDE 2: KPI Grid
+    # SLIDE 3: KPI Grid
     table_slide_layout = prs.slide_layouts[5]  # blank slide
-    slide2 = prs.slides.add_slide(table_slide_layout)
-    slide2.shapes.title.text = "Key Performance Indicators"
+    slide3 = prs.slides.add_slide(table_slide_layout)
+    slide3.shapes.title.text = "Key Performance Indicators"
 
     # Create grid labels and values
     grid_data = [
@@ -2094,7 +2121,7 @@ def export_campaign_summary_to_ppt(
         rows_count = len(grid_data)
         cols_count = len(grid_data[0])
 
-        table = slide2.shapes.add_table(rows_count, cols_count, margin, table_top, table_width, table_height)
+        table = slide3.shapes.add_table(rows_count, cols_count, margin, table_top, table_width, table_height)
         table = table.table
 
         # Fill table data
