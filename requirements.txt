@@ -4,4 +4,4 @@ plotly
 numpy
 openpyxl
 python-pptx
-kaleido
+kaleido==0.2.1
