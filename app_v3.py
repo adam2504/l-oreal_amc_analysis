@@ -793,6 +793,10 @@ def campaign_summary_tab():
             width=800
         )
 
+        # Hide axis labels (20, 40, 60, 80, 100)
+        fig.update_xaxes(showticklabels=False, showgrid=False)
+        fig.update_yaxes(showticklabels=False, showgrid=False)
+
         st.plotly_chart(fig)
 
         # KPI Grid - 3x4 metrics grid with filters
