@@ -960,7 +960,9 @@ def campaign_summary_tab():
                     total_purchases_filtered, conversion_rate_filtered, purchase_roas_filtered,
                     total_ntb_purchases_filtered, ntb_conversion_rate_filtered, ntb_roas_filtered,
                     # Chart and metrics for slide 1
-                    fig, total_cost, total_impressions, total_conversions
+                    fig, total_cost, total_impressions, total_conversions,
+                    # Filter parameters for slide 3 header
+                    selected_path_channels, selected_path_type
                 )
                 st.download_button(
                     label="📥 **Download Campaign Summary Presentation (.pptx)**",
@@ -1994,7 +1996,8 @@ def export_campaign_summary_to_ppt(
     reach_filtered, dpv_filtered, cpdpv_filtered,
     purchases_filtered, conversion_rate_filtered, purchase_roas_filtered,
     ntb_purchases_filtered, ntb_conversion_rate_filtered, ntb_roas_filtered,
-    fig, total_cost, total_impressions, total_conversions
+    fig, total_cost, total_impressions, total_conversions,
+    selected_path_channels, selected_path_type
 ):
     """
     Export campaign summary to PowerPoint presentation with two slides:
@@ -2137,6 +2140,25 @@ def export_campaign_summary_to_ppt(
     blank_slide_layout = prs.slide_layouts[5]  # blank slide
     slide3 = prs.slides.add_slide(blank_slide_layout)
     slide3.shapes.title.text = "Key Performance Indicators"
+
+    # Add filter parameters box at bottom center
+    filter_box_left = Inches(7.75)
+    filter_box_top = Inches(6.75)
+    filter_box = slide3.shapes.add_textbox(
+        filter_box_left, filter_box_top, Inches(6.5), Inches(0.6)
+    )
+    tf = filter_box.text_frame
+    tf.text = f"Filter Parameters Used:\nPath Channels: {', '.join(selected_path_channels) if selected_path_channels else 'All'}\nPath Type: {selected_path_type}"
+    tf.paragraphs[0].alignment = PP_ALIGN.LEFT
+    tf.paragraphs[0].font.size = Pt(10)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].alignment = PP_ALIGN.LEFT
+    tf.paragraphs[1].font.size = Pt(9)
+    tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
+    tf.paragraphs[2].alignment = PP_ALIGN.LEFT
+    tf.paragraphs[2].font.size = Pt(9)
+    tf.paragraphs[2].font.color.rgb = RGBColor(23, 54, 93)
 
     # Rectangle dimensions - exactly same as slide 2
     rect_width = Inches(2.0)
