@@ -2133,52 +2133,282 @@ def export_campaign_summary_to_ppt(
 
     slide2.shapes.add_picture(chart_img_stream, chart_left, chart_top, chart_width, chart_height)
 
-    # SLIDE 3: KPI Grid
-    table_slide_layout = prs.slide_layouts[5]  # blank slide
-    slide3 = prs.slides.add_slide(table_slide_layout)
+    # SLIDE 3: Individual KPI Rectangles in 4x3 grid
+    blank_slide_layout = prs.slide_layouts[5]  # blank slide
+    slide3 = prs.slides.add_slide(blank_slide_layout)
     slide3.shapes.title.text = "Key Performance Indicators"
 
-    # Create grid labels and values
-    grid_data = [
-        ["", "Budget", "Revenue", "ROAS"],
-        ["Overview", format_metric_value(cost_filtered, "currency"), format_metric_value(revenue_filtered, "currency"), format_metric_value(roas_filtered, "decimal")],
-        ["Awareness", format_metric_value(reach_filtered, "integer"), "", ""],
-        ["Engagement", format_metric_value(dpv_filtered, "integer"), format_metric_value(cpdpv_filtered, "currency"), ""],
-        ["Purchase", format_metric_value(purchases_filtered, "integer"), format_metric_value(conversion_rate_filtered, "percentage"), format_metric_value(purchase_roas_filtered, "decimal")],
-        ["NTB", format_metric_value(ntb_purchases_filtered, "integer"), format_metric_value(ntb_conversion_rate_filtered, "percentage"), format_metric_value(ntb_roas_filtered, "decimal")]
-    ]
+    # Rectangle dimensions for small individual KPIs
+    rect_width = Inches(2.0)
+    rect_height = Inches(0.8)
+    rect_spacing_x = Inches(0.2)  # Horizontal space between rectangles
+    rect_spacing_y = Inches(0.2)  # Vertical space between rows
 
-    # Calculate table dimensions and positions
-    slide_width = prs.slide_width
-    slide_height = prs.slide_height
-    margin = Inches(0.5)
-    table_top = Inches(1.7)
-    table_width = slide_width - 2 * margin
-    table_height = Inches(5.5)
+    # Starting positions
+    start_left = Inches(1.75)
+    start_top = Inches(2)
 
-    if grid_data:
-        rows_count = len(grid_data)
-        cols_count = len(grid_data[0])
+    # Row 1: 3 rectangles (Overview metrics)
+    rect1_left = start_left
+    rect1_top = start_top
+    rect1 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect1_left, rect1_top, rect_width, rect_height
+    )
+    rect1.fill.solid()
+    rect1.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect1.line.color.rgb = RGBColor(79, 129, 189)
+    rect1.line.width = Pt(2)
 
-        table = slide3.shapes.add_table(rows_count, cols_count, margin, table_top, table_width, table_height)
-        table = table.table
+    rect1_text = slide3.shapes.add_textbox(
+        rect1_left + Inches(0.05), rect1_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf1 = rect1_text.text_frame
+    tf1.text = format_metric_value(cost_filtered, 'currency')
+    tf1.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf1.paragraphs[0].font.size = Pt(10)
+    tf1.paragraphs[0].font.bold = True
+    tf1.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
 
-        # Fill table data
-        for row_idx, row_data in enumerate(grid_data):
-            for col_idx, cell_value in enumerate(row_data):
-                cell = table.cell(row_idx, col_idx)
-                cell.text = str(cell_value)
+    rect2_left = start_left + rect_width + rect_spacing_x
+    rect2_top = start_top
+    rect2 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect2_left, rect2_top, rect_width, rect_height
+    )
+    rect2.fill.solid()
+    rect2.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect2.line.color.rgb = RGBColor(79, 129, 189)
+    rect2.line.width = Pt(2)
 
-                # Style headers (first row and first column)
-                if row_idx == 0 or col_idx == 0:
-                    cell.fill.solid()
-                    cell.fill.fore_color.rgb = RGBColor(79, 129, 189)  # Blue
-                    cell.text_frame.paragraphs[0].font.color.rgb = RGBColor(255, 255, 255)  # White
-                    cell.text_frame.paragraphs[0].font.bold = True
-                    cell.text_frame.paragraphs[0].font.size = Pt(14)
-                else:
-                    # Data cells
-                    cell.text_frame.paragraphs[0].font.size = Pt(12)
+    rect2_text = slide3.shapes.add_textbox(
+        rect2_left + Inches(0.05), rect2_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf2 = rect2_text.text_frame
+    tf2.text = format_metric_value(revenue_filtered, 'currency')
+    tf2.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf2.paragraphs[0].font.size = Pt(10)
+    tf2.paragraphs[0].font.bold = True
+    tf2.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect3_left = start_left + 2 * (rect_width + rect_spacing_x)
+    rect3_top = start_top
+    rect3 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect3_left, rect3_top, rect_width, rect_height
+    )
+    rect3.fill.solid()
+    rect3.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect3.line.color.rgb = RGBColor(79, 129, 189)
+    rect3.line.width = Pt(2)
+
+    rect3_text = slide3.shapes.add_textbox(
+        rect3_left + Inches(0.05), rect3_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf3 = rect3_text.text_frame
+    tf3.text = format_metric_value(roas_filtered, 'decimal')
+    tf3.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf3.paragraphs[0].font.size = Pt(10)
+    tf3.paragraphs[0].font.bold = True
+    tf3.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    # Row 2: 3 rectangles (Reach, DPV, CPDPV)
+    row2_top = start_top + rect_height + rect_spacing_y
+
+    rect4_left = start_left
+    rect4_top = row2_top
+    rect4 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect4_left, rect4_top, rect_width, rect_height
+    )
+    rect4.fill.solid()
+    rect4.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect4.line.color.rgb = RGBColor(79, 129, 189)
+    rect4.line.width = Pt(2)
+
+    rect4_text = slide3.shapes.add_textbox(
+        rect4_left + Inches(0.05), rect4_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf4 = rect4_text.text_frame
+    tf4.text = format_metric_value(reach_filtered, 'integer')
+    tf4.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf4.paragraphs[0].font.size = Pt(10)
+    tf4.paragraphs[0].font.bold = True
+    tf4.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect5_left = start_left + rect_width + rect_spacing_x
+    rect5_top = row2_top
+    rect5 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect5_left, rect5_top, rect_width, rect_height
+    )
+    rect5.fill.solid()
+    rect5.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect5.line.color.rgb = RGBColor(79, 129, 189)
+    rect5.line.width = Pt(2)
+
+    rect5_text = slide3.shapes.add_textbox(
+        rect5_left + Inches(0.05), rect5_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf5 = rect5_text.text_frame
+    tf5.text = format_metric_value(dpv_filtered, 'integer')
+    tf5.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf5.paragraphs[0].font.size = Pt(10)
+    tf5.paragraphs[0].font.bold = True
+    tf5.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect6_left = start_left + 2 * (rect_width + rect_spacing_x)
+    rect6_top = row2_top
+    rect6 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect6_left, rect6_top, rect_width, rect_height
+    )
+    rect6.fill.solid()
+    rect6.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect6.line.color.rgb = RGBColor(79, 129, 189)
+    rect6.line.width = Pt(2)
+
+    rect6_text = slide3.shapes.add_textbox(
+        rect6_left + Inches(0.05), rect6_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf6 = rect6_text.text_frame
+    tf6.text = format_metric_value(cpdpv_filtered, 'currency')
+    tf6.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf6.paragraphs[0].font.size = Pt(10)
+    tf6.paragraphs[0].font.bold = True
+    tf6.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    # Row 3: 3 rectangles (Purchases metrics)
+    row3_top = row2_top + rect_height + rect_spacing_y
+
+    rect7_left = start_left
+    rect7_top = row3_top
+    rect7 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect7_left, rect7_top, rect_width, rect_height
+    )
+    rect7.fill.solid()
+    rect7.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect7.line.color.rgb = RGBColor(79, 129, 189)
+    rect7.line.width = Pt(2)
+
+    rect7_text = slide3.shapes.add_textbox(
+        rect7_left + Inches(0.05), rect7_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf7 = rect7_text.text_frame
+    tf7.text = format_metric_value(purchases_filtered, 'integer')
+    tf7.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf7.paragraphs[0].font.size = Pt(10)
+    tf7.paragraphs[0].font.bold = True
+    tf7.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect8_left = start_left + rect_width + rect_spacing_x
+    rect8_top = row3_top
+    rect8 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect8_left, rect8_top, rect_width, rect_height
+    )
+    rect8.fill.solid()
+    rect8.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect8.line.color.rgb = RGBColor(79, 129, 189)
+    rect8.line.width = Pt(2)
+
+    rect8_text = slide3.shapes.add_textbox(
+        rect8_left + Inches(0.05), rect8_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf8 = rect8_text.text_frame
+    tf8.text = format_metric_value(conversion_rate_filtered, 'percentage')
+    tf8.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf8.paragraphs[0].font.size = Pt(10)
+    tf8.paragraphs[0].font.bold = True
+    tf8.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect9_left = start_left + 2 * (rect_width + rect_spacing_x)
+    rect9_top = row3_top
+    rect9 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect9_left, rect9_top, rect_width, rect_height
+    )
+    rect9.fill.solid()
+    rect9.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect9.line.color.rgb = RGBColor(79, 129, 189)
+    rect9.line.width = Pt(2)
+
+    rect9_text = slide3.shapes.add_textbox(
+        rect9_left + Inches(0.05), rect9_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf9 = rect9_text.text_frame
+    tf9.text = format_metric_value(purchase_roas_filtered, 'decimal')
+    tf9.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf9.paragraphs[0].font.size = Pt(10)
+    tf9.paragraphs[0].font.bold = True
+    tf9.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    # Row 4: 3 rectangles (NTB metrics)
+    row4_top = row3_top + rect_height + rect_spacing_y
+
+    rect10_left = start_left
+    rect10_top = row4_top
+    rect10 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect10_left, rect10_top, rect_width, rect_height
+    )
+    rect10.fill.solid()
+    rect10.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect10.line.color.rgb = RGBColor(79, 129, 189)
+    rect10.line.width = Pt(2)
+
+    rect10_text = slide3.shapes.add_textbox(
+        rect10_left + Inches(0.05), rect10_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf10 = rect10_text.text_frame
+    tf10.text = format_metric_value(ntb_purchases_filtered, 'integer')
+    tf10.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf10.paragraphs[0].font.size = Pt(10)
+    tf10.paragraphs[0].font.bold = True
+    tf10.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect11_left = start_left + rect_width + rect_spacing_x
+    rect11_top = row4_top
+    rect11 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect11_left, rect11_top, rect_width, rect_height
+    )
+    rect11.fill.solid()
+    rect11.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect11.line.color.rgb = RGBColor(79, 129, 189)
+    rect11.line.width = Pt(2)
+
+    rect11_text = slide3.shapes.add_textbox(
+        rect11_left + Inches(0.05), rect11_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf11 = rect11_text.text_frame
+    tf11.text = format_metric_value(ntb_conversion_rate_filtered, 'percentage')
+    tf11.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf11.paragraphs[0].font.size = Pt(10)
+    tf11.paragraphs[0].font.bold = True
+    tf11.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
+
+    rect12_left = start_left + 2 * (rect_width + rect_spacing_x)
+    rect12_top = row4_top
+    rect12 = slide3.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect12_left, rect12_top, rect_width, rect_height
+    )
+    rect12.fill.solid()
+    rect12.fill.fore_color.rgb = RGBColor(240, 248, 255)
+    rect12.line.color.rgb = RGBColor(79, 129, 189)
+    rect12.line.width = Pt(2)
+
+    rect12_text = slide3.shapes.add_textbox(
+        rect12_left + Inches(0.05), rect12_top + Inches(0.1), rect_width - Inches(0.1), rect_height - Inches(0.2)
+    )
+    tf12 = rect12_text.text_frame
+    tf12.text = format_metric_value(ntb_roas_filtered, 'decimal')
+    tf12.paragraphs[0].alignment = PP_ALIGN.CENTER
+    tf12.paragraphs[0].font.size = Pt(10)
+    tf12.paragraphs[0].font.bold = True
+    tf12.paragraphs[0].font.color.rgb = RGBColor(23, 54, 93)
 
     # Save presentation to BytesIO
     ppt_buffer = BytesIO()
