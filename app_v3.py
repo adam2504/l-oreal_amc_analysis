@@ -2134,12 +2134,12 @@ def export_campaign_summary_to_ppt(
     import plotly.io as pio
     import io as python_io
 
-    # Convert plotly figure to image
-    chart_img_data = pio.to_image(fig, format='png', width=800, height=400)
+    # Convert plotly figure to image using same dimensions as displayed in Streamlit
+    chart_img_data = pio.to_image(fig, format='png', width=1100, height=300)
     chart_img_stream = python_io.BytesIO(chart_img_data)
 
     # Add chart to slide
-    chart_left = Inches(1)
+    chart_left = Inches(0.75)
     chart_top = Inches(3.5)
     chart_width = Inches(9)
     chart_height = Inches(2.5)
