@@ -784,10 +784,14 @@ def campaign_summary_tab():
             showlegend=True,
             legend=dict(
                 x=0.5,
-                y=-0.2,
+                y=-0.25,
                 xanchor='center',
                 yanchor='top',
-                orientation='h'
+                orientation='h',
+                bgcolor='rgba(255,255,255,0.8)',
+                bordercolor='rgba(0,0,0,0.1)',
+                borderwidth=0,
+                itemwidth=60  # Working parameter that provides comfortable spacing between legend items
             ),
             height=300,
             width=800
