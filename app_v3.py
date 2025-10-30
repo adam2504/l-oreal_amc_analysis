@@ -768,13 +768,15 @@ def campaign_summary_tab():
 
             fig.add_trace(go.Bar(
                 name=channel,
-                y=['Cost Distribution'],
+                y=[''],
                 x=[percentage],
                 marker_color=color,
                 orientation='h',
                 showlegend=True,
                 text=f"{percentage:.1f}%",
-                textposition="inside"
+                textposition="inside",
+                insidetextanchor="middle",
+                insidetextfont=dict(weight='bold')
             ))
 
         fig.update_layout(
