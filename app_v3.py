@@ -11,6 +11,7 @@ from io import BytesIO
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_PARAGRAPH_ALIGNMENT as PP_ALIGN
 
 # Utility functions
 def format_number_for_sortable_copy(value, format_type="default", padding_width=10):
@@ -2075,37 +2076,43 @@ def export_campaign_summary_to_ppt(
 
     # Add text boxes inside each rectangle
     metric1_shape = slide2.shapes.add_textbox(
-        rect1_left + Inches(0.2), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+        rect1_left + Inches(0.1), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
     )
     tf = metric1_shape.text_frame
     tf.text = f"Total Cost\n{format_metric_value(total_cost, 'currency')}"
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
     tf.paragraphs[0].font.size = Pt(12)
     tf.paragraphs[0].font.bold = True
     tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].alignment = PP_ALIGN.CENTER
     tf.paragraphs[1].font.size = Pt(14)
     tf.paragraphs[1].font.bold = True
     tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
 
     metric2_shape = slide2.shapes.add_textbox(
-        rect2_left + Inches(0.2), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+        rect2_left + Inches(0.1), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
     )
     tf = metric2_shape.text_frame
     tf.text = f"Total Impressions\n{format_metric_value(total_impressions, 'integer')}"
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
     tf.paragraphs[0].font.size = Pt(12)
     tf.paragraphs[0].font.bold = True
     tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].alignment = PP_ALIGN.CENTER
     tf.paragraphs[1].font.size = Pt(14)
     tf.paragraphs[1].font.bold = True
     tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
 
     metric3_shape = slide2.shapes.add_textbox(
-        rect3_left + Inches(0.2), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+        rect3_left + Inches(0.1), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
     )
     tf = metric3_shape.text_frame
     tf.text = f"Total Conversions\n{format_metric_value(total_conversions, 'integer')}"
+    tf.paragraphs[0].alignment = PP_ALIGN.CENTER
     tf.paragraphs[0].font.size = Pt(12)
     tf.paragraphs[0].font.bold = True
     tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].alignment = PP_ALIGN.CENTER
     tf.paragraphs[1].font.size = Pt(14)
     tf.paragraphs[1].font.bold = True
     tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
