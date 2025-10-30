@@ -2017,25 +2017,14 @@ def export_campaign_summary_to_ppt(
     slide2 = prs.slides.add_slide(table_slide_layout)
     slide2.shapes.title.text = "Campaign Metrics Overview"
 
-    # Add rectangle shape with main metrics at center-top (moved down and left)
+    # Add three separate rectangle shapes for main metrics
     slide_width = prs.slide_width
     slide_height = prs.slide_height
 
-    # Oval dimensions - elongated oval at center-top, moved down and left
-    rect_left = Inches(1.5)  # Moved more to the left
-    rect_top = Inches(2)   # Moved down
-    rect_width = Inches(7)   # Increased width to accommodate all 3 KPIs without overflow
+    # Rectangle dimensions - side by side instead of one long one
+    rect_width = Inches(2.0)  # Smaller width for individual rectangles
     rect_height = Inches(1)
-
-    # Add rounded rectangle shape (instead of straight rectangle)
-    rect = slide2.shapes.add_shape(
-        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
-        rect_left, rect_top, rect_width, rect_height
-    )
-    rect.fill.solid()
-    rect.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue
-    rect.line.color.rgb = RGBColor(79, 129, 189)  # Dark blue border
-    rect.line.width = Pt(2)
+    rect_top = Inches(2)
 
     # Formatter for metrics
     def format_metric_value(value, format_type="integer"):
@@ -2051,32 +2040,75 @@ def export_campaign_summary_to_ppt(
         else:
             return str(value)
 
-    # Add three main metrics inside the oval, side by side
-    metrics = [
-        ("Total Cost", format_metric_value(total_cost, "currency")),
-        ("Total Impressions", format_metric_value(total_impressions, "integer")),
-        ("Total Conversions", format_metric_value(total_conversions, "integer"))
-    ]
+    # Rectangle 1: Total Cost
+    rect1_left = Inches(1.0)
+    rect1 = slide2.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect1_left, rect_top, rect_width, rect_height
+    )
+    rect1.fill.solid()
+    rect1.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue
+    rect1.line.color.rgb = RGBColor(79, 129, 189)  # Dark blue border
+    rect1.line.width = Pt(2)
 
-    # Create text boxes inside the rectangle
-    text_left = rect_left + Inches(0.3)
-    metric_spacing = Inches(2)  # Space between each metric
+    # Rectangle 2: Total Impressions
+    rect2_left = Inches(4.0)
+    rect2 = slide2.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect2_left, rect_top, rect_width, rect_height
+    )
+    rect2.fill.solid()
+    rect2.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue
+    rect2.line.color.rgb = RGBColor(79, 129, 189)  # Dark blue border
+    rect2.line.width = Pt(2)
 
-    for i, (label, value) in enumerate(metrics):
-        metric_left = text_left + (i * (metric_spacing + Inches(0.5)))
+    # Rectangle 3: Total Conversions
+    rect3_left = Inches(7.0)
+    rect3 = slide2.shapes.add_shape(
+        5,  # MSO_SHAPE.ROUNDED_RECTANGLE
+        rect3_left, rect_top, rect_width, rect_height
+    )
+    rect3.fill.solid()
+    rect3.fill.fore_color.rgb = RGBColor(240, 248, 255)  # Light blue
+    rect3.line.color.rgb = RGBColor(79, 129, 189)  # Dark blue border
+    rect3.line.width = Pt(2)
 
-        metric_shape = slide2.shapes.add_textbox(
-            metric_left, rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
-        )
-        tf = metric_shape.text_frame
-        tf.text = f"{label}\n{value}"
-        tf.paragraphs[0].font.size = Pt(12)
-        tf.paragraphs[0].font.bold = True
-        tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    # Add text boxes inside each rectangle
+    metric1_shape = slide2.shapes.add_textbox(
+        rect1_left + Inches(0.2), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+    )
+    tf = metric1_shape.text_frame
+    tf.text = f"Total Cost\n{format_metric_value(total_cost, 'currency')}"
+    tf.paragraphs[0].font.size = Pt(12)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].font.size = Pt(14)
+    tf.paragraphs[1].font.bold = True
+    tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
 
-        tf.paragraphs[1].font.size = Pt(14)
-        tf.paragraphs[1].font.bold = True
-        tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
+    metric2_shape = slide2.shapes.add_textbox(
+        rect2_left + Inches(0.2), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+    )
+    tf = metric2_shape.text_frame
+    tf.text = f"Total Impressions\n{format_metric_value(total_impressions, 'integer')}"
+    tf.paragraphs[0].font.size = Pt(12)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].font.size = Pt(14)
+    tf.paragraphs[1].font.bold = True
+    tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
+
+    metric3_shape = slide2.shapes.add_textbox(
+        rect3_left + Inches(0.2), rect_top + Inches(0.2), Inches(1.8), Inches(0.8)
+    )
+    tf = metric3_shape.text_frame
+    tf.text = f"Total Conversions\n{format_metric_value(total_conversions, 'integer')}"
+    tf.paragraphs[0].font.size = Pt(12)
+    tf.paragraphs[0].font.bold = True
+    tf.paragraphs[0].font.color.rgb = RGBColor(79, 129, 189)
+    tf.paragraphs[1].font.size = Pt(14)
+    tf.paragraphs[1].font.bold = True
+    tf.paragraphs[1].font.color.rgb = RGBColor(23, 54, 93)
 
     # Add chart below the metrics (using plotly's static image export)
     import plotly.io as pio
